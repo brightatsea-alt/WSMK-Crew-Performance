@@ -455,7 +455,7 @@ async function addFiles(files){
 }
 function renderQueue(){
   $('#queue').innerHTML = QUEUE.map((q,i)=>`<div class="qitem ${q.status}" title="${esc(q.label)}"><img src="${q.thumb}"><span class="qs">${i+1}${q.status==='done'?' ✓':q.status==='err'?' ✗':q.status==='busy'?' …':''}</span><button class="qx" data-x="${q.id}" title="제거">✕</button><div class="ql">${esc(q.seafarer||q.label)}</div>${q.status==='err'&&q.error?`<div class="qerr" title="${esc(q.error)}">⚠ ${esc(q.error)}</div>`:''}</div>`).join('');
-  $('#queue').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ QUEUE=QUEUE.filter(q=>q.id!==b.dataset.x); renderQueue(); });
+  $('#queue').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ QUEUE=QUEUE.filter(q=>q.id!==b.dataset.x); dropOrphanGroups(); renderQueue(); });
   $('#dropText').classList.toggle('hidden', QUEUE.length>0); $('#moreHint').classList.toggle('hidden', QUEUE.length===0); drop.style.minHeight = QUEUE.length? '70px':'190px';
   $('#analyzeBtn').disabled = !QUEUE.some(q=>q.status!=='done');
 }
@@ -468,7 +468,14 @@ $('#file').onchange = e => { addFiles(e.target.files); e.target.value=''; };
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
-$('#clearImg').onclick = () => { QUEUE=[]; renderQueue(); $('#exStatus').textContent=''; };
+$('#clearImg').onclick = () => { QUEUE=[]; dropOrphanGroups(); renderQueue(); $('#exStatus').textContent=''; };
+/* 이미지가 제거되면 그 이미지에서 추출된 선원 그룹(및 결과)도 함께 제거 — 새 이미지를 붙이면 그 선원만 조회되도록. 직접 입력한 그룹(sources 없음)은 유지 */
+function dropOrphanGroups(){
+  const live = new Set(QUEUE.map(q=>q.id));
+  const before = REPORTS.length;
+  REPORTS = REPORTS.filter(g => !(g.sources && g.sources.length) || g.sources.some(id=>live.has(id)));
+  if (REPORTS.length !== before){ renderGroups(); renderResults(); }
+}
 
 /* ---------------- extraction (per image) → groups (per seafarer) ---------------- */
 function normPerson(s){ return String(s||'').toUpperCase().replace(/[^A-Z가-힣]/g,''); }
@@ -495,7 +502,8 @@ function mergeIntoGroups(q){
   const entries = (q.entries||[]).map(e=>{ const lv=isLeave(e); return {vessel:e.vessel, matched: lv?'':matchVessel(e.vessel), leave:lv, status:e.status||'', reason: lv?offReason(e):'', rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}; });
   const key = normPerson(q.seafarer);
   let g = key ? REPORTS.find(r=>normPerson(r.name)===key) : null;
-  if (!g){ g={id:uid(), name:q.seafarer||`선원 ${REPORTS.length+1}`, rank:q.rank||'', entries:[], cards:null}; REPORTS.push(g); }
+  if (!g){ g={id:uid(), name:q.seafarer||`선원 ${REPORTS.length+1}`, rank:q.rank||'', entries:[], cards:null, sources:[]}; REPORTS.push(g); }
+  (g.sources=g.sources||[]).push(q.id);
   if (!g.rank && q.rank) g.rank=q.rank;
   entries.forEach(e=>{ if(!g.entries.some(x=>x.sign_on===e.sign_on && (e.leave ? x.leave : x.matched===e.matched))) g.entries.push(e); });
   g.entries.sort((a,b)=>a.sign_on.localeCompare(b.sign_on));
