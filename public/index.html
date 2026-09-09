@@ -166,6 +166,37 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .seafarer{font-size:13px;color:var(--ink2)}
 .seafarer b{color:var(--ink);font-size:15px}
 @media print{header.top,.card.upload,.actions,.btn{display:none!important}body{background:#fff}}
+/* multi-seafarer additions */
+.queue{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.qitem{position:relative;width:118px;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden;font-size:11px}
+.qitem img{width:100%;height:74px;object-fit:cover;display:block;background:#f1f5f9}
+.qitem .ql{padding:4px 6px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qitem .qx{position:absolute;top:3px;right:3px;background:rgba(15,23,42,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:18px;cursor:pointer;padding:0}
+.qitem .qs{position:absolute;left:4px;top:4px;background:rgba(255,255,255,.9);border-radius:5px;padding:1px 5px;font-size:10px;font-weight:700;color:var(--brand)}
+.qitem.done .qs{color:var(--good)} .qitem.err .qs{color:var(--crit)}
+.group{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.group .gh{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--line)}
+.group .gh input{padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-weight:600}
+.group .gh .gr{width:90px}
+.group .gh .gn{width:220px}
+.report{margin-top:26px;padding-top:6px;border-top:3px solid var(--brand)}
+.report .rtitle{display:flex;align-items:center;gap:10px;margin:8px 0 10px}
+.report .rtitle .idx{background:var(--brand);color:#fff;font-weight:700;border-radius:8px;padding:2px 10px;font-size:13px}
+.moublock{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mouc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.mouc .mn{font-size:12px;font-weight:700;color:var(--ink2);display:flex;justify-content:space-between}
+.mouc .mrow{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;font-size:12px;color:var(--ink2)}
+.mouc .mrow b{font-size:18px;font-variant-numeric:tabular-nums}
+.mouc .mrow .fl{font-size:12px;font-weight:600;color:var(--ink2)}
+.mouc.good{background:#eefaf1;border-color:#b7e4c4} .mouc.good .mrow b{color:var(--good)}
+.mouc.bad{background:#fdf0ef;border-color:#f1b8b3} .mouc.bad .mrow b{color:var(--crit)}
+.mouc .mb{height:5px;border-radius:3px;background:#e2e8f0;overflow:hidden;margin:6px 0 4px;position:relative}
+.mouc .mb i{display:block;height:100%;border-radius:3px;background:var(--brand2)}
+.mouc .mb s{position:absolute;top:-2px;width:2px;height:9px;background:var(--ink2)}
+.rtiles .tile{padding:10px 12px}
+.rtiles .tile .val{font-size:18px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.progress{font-size:12.5px;color:var(--ink2)}
 </style>
 </head>
 <body>
@@ -199,7 +230,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 
 <div class="wrap">
 
-  <!-- Summary tiles -->
+  <!-- Fleet summary tiles -->
   <section id="summary">
     <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap">
       <h2 style="margin:0;font-size:15px">Fleet Average per Vessel</h2>
@@ -208,82 +239,65 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
       <label style="font-size:12px;color:var(--ink2)">선박 수 (당해년도) <input id="fleetNow" type="number" min="1" style="width:64px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px"></label>
       <label style="font-size:12px;color:var(--ink2)">(전년도) <input id="fleetPrev" type="number" min="1" style="width:64px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px"></label>
     </div>
-    <div class="who hidden" id="who">
-      <div class="avatar" id="whoAvatar">?</div>
-      <div class="whoinfo">
-        <div class="name" id="whoName"></div>
-        <div class="meta" id="whoMeta"></div>
-      </div>
-      <div class="whoright">
-        <button class="btn primary sm" id="docxBtn" title="전체 보고서를 Word(.docx)로 다운로드">📄 Word 다운로드</button>
-      </div>
-    </div>
     <div class="tiles" id="tiles"></div>
-    <div class="legend hidden" id="tileLegend"><span><i class="g"></i>이 선원이 당해년도(YTD) Fleet average보다 우수</span><span><i class="r"></i>Fleet average보다 저조</span><span>연환산 = 승선기간 합계 ÷ (승선일수/365) → 한 척·1년 기준으로 환산해 비교</span></div>
-    <div class="card assess hidden" id="assess">
-      <div class="hd"><h2>Performance Assessment</h2><span class="hint">Best shipping practice 기준 · 승선기간 선박 실적 vs Fleet average</span>
-        <span style="flex:1"></span><span class="status" id="assessStatus"></span><button class="btn sm" id="assessBtn">다시 생성</button><button class="btn sm" id="docxBtn2" title="Word 다운로드">📄 Word</button></div>
-
-      <div class="bd" id="assessBody"></div>
-    </div>
   </section>
 
   <!-- Upload -->
   <section class="grid2" style="margin-top:18px">
     <div class="card upload">
-      <div class="hd"><h2>1. 승선이력 스크린샷</h2><span class="hint">붙여넣기(Ctrl+V) · 드래그 · 파일 선택</span></div>
+      <div class="hd"><h2>1. 승선이력 스크린샷 / PDF</h2><span class="hint">붙여넣기(Ctrl+V) · 드래그 · 파일 선택 · 여러 장 가능</span></div>
       <div class="bd">
         <div class="drop" id="drop">
-          <input type="file" id="file" accept="image/*" title="">
+          <input type="file" id="file" accept="image/*,application/pdf" multiple title="">
           <div id="dropText">
             <div style="font-size:30px">🖼️</div>
-            <div>스크린샷을 여기에 <b>붙여넣기</b> <span class="kbd">Ctrl</span>+<span class="kbd">V</span> 하거나 드래그하세요</div>
-            <div style="font-size:12px;color:var(--ink3)">선박명 + 승선/하선일이 보이는 선원 경력 표 (PNG/JPG)</div>
+            <div>스크린샷을 <b>붙여넣기</b> <span class="kbd">Ctrl</span>+<span class="kbd">V</span> 하거나 파일을 드래그하세요</div>
+            <div style="font-size:12px;color:var(--ink2);margin-top:4px"><b>여러 선원을 한 번에</b> — 선원별 승선이력 스크린샷을 여러 장 올리거나 PDF(여러 페이지)를 올리면 선원별로 각각 분석해 아래에 차례로 나열합니다.</div>
+            <div style="font-size:12px;color:var(--ink3)">PNG / JPG / PDF · 선박명 + 승선/하선일이 보이는 선원 경력 표 · 같은 선원의 페이지가 여러 장이면 이름으로 자동 합칩니다</div>
           </div>
-          <img id="preview" class="hidden" alt="screenshot preview">
         </div>
+        <div class="queue" id="queue"></div>
+        <div class="remark hidden" id="moreHint" style="margin-top:6px">＋ 다른 선원의 스크린샷/PDF를 계속 붙여넣거나 드래그하면 목록에 추가됩니다.</div>
         <div class="actions">
           <button class="btn primary" id="analyzeBtn" disabled>승선기간 분석 (Claude)</button>
-          <button class="btn" id="clearImg">이미지 지우기</button>
+          <button class="btn" id="clearImg">모두 지우기</button>
           <span class="status" id="exStatus"></span>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">추출 결과를 확인·수정 후 조회</span>
-        <span style="flex:1"></span><button class="btn sm" id="addRow">+ 행 추가</button></div>
+      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">선원별 추출 결과를 확인·수정 후 조회</span>
+        <span style="flex:1"></span><button class="btn sm" id="addGroup">+ 선원 추가</button></div>
       <div class="bd">
-        <div class="seafarer" id="seafarer"></div>
-        <div class="tbl-wrap"><table class="entries" id="entries">
-          <thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Sign on</th><th>Sign off</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table></div>
-        <div id="entriesEmpty" class="sec none" style="padding:14px 0">스크린샷을 분석하면 승선 기간이 여기에 표시됩니다. 직접 입력도 가능합니다.</div>
-        <div class="actions"><button class="btn primary" id="runBtn" disabled>Performance 조회</button><span class="status" id="runStatus"></span></div>
+        <div id="groups"></div>
+        <div id="entriesEmpty" class="sec none" style="padding:14px 0">스크린샷/PDF를 분석하면 선원별 승선 기간이 여기에 표시됩니다. 직접 입력도 가능합니다.</div>
+        <div class="actions"><button class="btn primary" id="runBtn" disabled>Performance 조회 (전체)</button><button class="btn" id="docxAllBtn" disabled title="모든 선원 보고서를 하나의 Word로">📄 전체 Word</button><span class="status" id="runStatus"></span></div>
       </div>
     </div>
   </section>
 
-  <!-- Results -->
+  <!-- Results: one block per seafarer -->
   <section id="results"></section>
 
   <div class="foot" id="foot"></div>
 </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 /* ---------------- state ---------------- */
 let TOKEN = sessionStorage.getItem('wsmk_token') || null;
-let DATA = null;           // index.json
-let IMG = null;            // {b64, type}
-let ENTRIES = [];          // [{vessel, matched, rank, sign_on, sign_off}]
-let SEAFARER = null, SEAFARER_RANK = null, LAST_ASSESS = null;
+let DATA = null;
+let QUEUE = [];      // [{id, b64, type, thumb, label, status, seafarer, rank, entries}]
+let REPORTS = [];    // [{id, name, rank, entries:[{vessel,matched,rank,sign_on,sign_off}], cards, tot, assess, payload, mou}]
 const $ = s => document.querySelector(s);
 const fmtN = (v, d=1) => (v==null||isNaN(v)) ? '–' : Number(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0});
 const fmtH = h => h>=24 ? `${fmtN(h,1)} h <span class="remark">(${fmtN(h/24,1)} d)</span>` : `${fmtN(h,1)} h`;
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const today = new Date(); const Y = today.getFullYear(); const PY = Y-1;
+const uid = () => Math.random().toString(36).slice(2,9);
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 /* ---------------- auth ---------------- */
 async function api(path, opts={}) {
@@ -305,7 +319,6 @@ $('#loginForm').onsubmit = async e => {
   } catch(err){ $('#loginErr').textContent = err.message; }
   finally { $('#loginBtn').disabled=false; }
 };
-
 async function boot(){
   try { DATA = await api('/api/data'); }
   catch(e){ $('#loginErr').textContent = e.message; return; }
@@ -315,98 +328,132 @@ async function boot(){
   $('#foot').textContent = `Sources: ${DATA.sources.psc} (Database) · ${DATA.sources.kpi} (Tech Data / Crew Data1) — indexed ${g}`;
   $('#fleetNow').value = DATA.fleet_by_year[Y] || DATA.fleet_now.length || 50;
   $('#fleetPrev').value = DATA.fleet_by_year[PY] || $('#fleetNow').value;
-  $('#fleetHint').textContent = `${Y} vs ${PY} · 한 척당 평균 (LTIF는 총 건수)`;
-  renderTiles();
-  renderEntries();
+  $('#fleetHint').textContent = `${Y} vs ${PY} · 한 척당 평균 (Detention·LTIF는 건수)`;
+  DATA.psc.forEach(p=>{ if(p.code30==null) p.code30 = p.deficiencies.filter(d=>/\b30\b/.test(d.code)).length; });
+  renderFleetTiles(); renderGroups();
 }
-$('#fleetNow').oninput = $('#fleetPrev').oninput = () => renderTiles();
+$('#fleetNow').oninput = $('#fleetPrev').oninput = () => { renderFleetTiles(); REPORTS.forEach(r=>{ if(r.cards) renderReportTiles(r); }); };
 
-/* ---------------- fleet summary ---------------- */
+/* ---------------- fleet stats ---------------- */
 function yearStats(y){
   const psc = DATA.psc.filter(p=>p.date.startsWith(y));
   const ua = DATA.ua.filter(u=>u.date.startsWith(y));
   const lti = DATA.lti.filter(l=>l.date.startsWith(y) && l.type==='LTIF');
-  return {
-    insp: psc.length, defs: psc.reduce((a,p)=>a+p.def_count,0), det: psc.filter(p=>p.detention).length,
-    clean: psc.filter(p=>p.def_count===0).length,
-    uaN: ua.filter(u=>u.kpi==='Yes').length, uaH: ua.reduce((a,u)=>a+(u.kpi==='Yes'?u.hours:0),0), lti: lti.length,
-  };
+  return { insp: psc.length, defs: psc.reduce((a,p)=>a+p.def_count,0), det: psc.filter(p=>p.detention).length,
+    clean: psc.filter(p=>p.def_count===0).length, uaN: ua.filter(u=>u.kpi==='Yes').length, uaH: ua.reduce((a,u)=>a+(u.kpi==='Yes'?u.hours:0),0), lti: lti.length };
 }
-let CREW_TOTALS = null;
-function renderTiles(){
-  const n1 = Math.max(1, +$('#fleetNow').value||1), n0 = Math.max(1, +$('#fleetPrev').value||1);
-  const a = yearStats(String(Y)), b = yearStats(String(PY));
-  const c = CREW_TOTALS; const yrs = c ? Math.max(c.days||0, 1)/365 : 0;   // vessel-years on board → 연환산
-  // better: 'low' = lower is better, 'high' = higher is better, null = neutral
-  const tiles = [
+function fleetMou(y){ // fleet flawless rate per MOU for a year
+  const m={}; DATA.psc.filter(p=>p.date.startsWith(y)).forEach(p=>{ const k=p.mou||'Unknown'; m[k]=m[k]||{n:0,c:0,det:0}; m[k].n++; if(p.def_count===0)m[k].c++; if(p.detention)m[k].det++; }); return m;
+}
+function fleetN(){ return {n1: Math.max(1, +$('#fleetNow').value||1), n0: Math.max(1, +$('#fleetPrev').value||1)}; }
+function tileDefs(c){
+  const {n1,n0}=fleetN(); const a = yearStats(String(Y)), b = yearStats(String(PY));
+  const yrs = c ? Math.max(c.days||0,1)/365 : 0;
+  return { a,b,yrs, tiles:[
     {lbl:'PSC Inspections', unit:'/ vessel · yr', now:a.insp/n1, prev:b.insp/n0, crew:c&&c.insp/yrs, raw:c&&`${c.insp} insp.`, better:null},
     {lbl:'PSC Deficiencies', unit:'/ vessel · yr', now:a.defs/n1, prev:b.defs/n0, crew:c&&c.defs/yrs, raw:c&&`${c.defs} def.`, better:'low'},
     {lbl:'Deficiency-free rate', unit:'% of inspections', now:a.insp?100*a.clean/a.insp:null, prev:b.insp?100*b.clean/b.insp:null, crew:c&&(c.insp?100*c.clean/c.insp:null), raw:c&&`${c.clean}/${c.insp}`, better:'high', d:0, pct:true},
     {lbl:'PSC Detentions', unit:'fleet total (per vessel)', now:a.det/n1, prev:b.det/n0, crew:c&&c.det/yrs, raw:c&&`${c.det} det.`, better:'low', fleetRaw:[a.det,b.det]},
     {lbl:'Unplanned Unavailability', unit:'hours / vessel · yr', now:a.uaH/n1, prev:b.uaH/n0, crew:c&&c.uaH/yrs, raw:c&&`${fmtN(c.uaH,1)} h (${c.uaN})`, better:'low', d:1},
     {lbl:'LTIF', unit:'count (per vessel)', now:a.lti/n1, prev:b.lti/n0, crew:c&&c.lti/yrs, raw:c&&`${c.lti} LTI`, better:'low', fleetRaw:[a.lti,b.lti]},
-  ];
-  const judge = t => {
-    if (!c || t.better==null || t.crew==null || t.now==null) return {cls:'', txt:''};
-    const diff = t.crew - t.now; const tol = Math.abs(t.now)*0.05;
-    if (t.better==='low' && t.crew===0) return {cls:'good', txt: t.now===0 ? '▲ 0건 (목표 달성)' : '▲ 평균보다 우수'};
-    if (Math.abs(diff) <= tol) return {cls:'even', txt:'≈ 평균'};
-    const good = t.better==='low' ? diff<0 : diff>0;
-    return {cls: good?'good':'bad', txt: good?'▲ 평균보다 우수':'▼ 평균보다 저조'};
-  };
-  $('#tiles').innerHTML = tiles.map(t=>{ const j=judge(t); return `
+  ]};
+}
+function judge(t,c){
+  if (!c || t.better==null || t.crew==null || t.now==null) return {cls:'', txt:''};
+  const diff = t.crew - t.now; const tol = Math.abs(t.now)*0.05;
+  if (t.better==='low' && t.crew===0) return {cls:'good', txt: t.now===0 ? '▲ 0건 (목표 달성)' : '▲ 평균보다 우수'};
+  if (Math.abs(diff) <= tol) return {cls:'even', txt:'≈ 평균'};
+  const good = t.better==='low' ? diff<0 : diff>0;
+  return {cls: good?'good':'bad', txt: good?'▲ 평균보다 우수':'▼ 평균보다 저조'};
+}
+function tilesHtml(c){
+  const {tiles,yrs}=tileDefs(c);
+  return tiles.map(t=>{ const j=judge(t,c); return `
     <div class="tile ${c?('cmp '+j.cls):''}"><div class="lbl">${t.lbl}<span class="unit">${t.unit}</span></div>
       <div class="rows"><span class="yr">${Y} YTD</span><span class="val">${t.fleetRaw?`${t.fleetRaw[0]}건 <span class="raw">(${fmtN(t.now,2)}/vsl)</span>`:fmtN(t.now,t.d??2)+(t.pct?' %':'')}</span>
       <span class="yr">${PY}</span><span class="val prev">${t.fleetRaw?`${t.fleetRaw[1]}건 <span class="raw">(${fmtN(t.prev,2)}/vsl)</span>`:fmtN(t.prev,t.d??2)+(t.pct?' %':'')}</span></div>
       ${c?`<div class="crew ${j.cls}"><div class="crewl"><span>이 선원${t.pct?'':' (연환산)'}</span><span class="raw">${t.raw}${t.pct?'':' · '+fmtN(yrs,2)+' vsl·yr'}</span></div>
            <div class="crewv"><b>${t.crew==null?'–':fmtN(t.crew,t.d??2)+(t.pct?' %':'')}</b>${j.txt?`<span class="tag">${j.txt}</span>`:''}</div></div>`:''}
     </div>`;}).join('');
-  $('#tileLegend').classList.toggle('hidden', !c);
 }
+function renderFleetTiles(){ $('#tiles').innerHTML = tilesHtml(null); }
 
-/* ---------------- image handling ---------------- */
+/* ---------------- input: images & PDF ---------------- */
 const drop = $('#drop');
-function setImage(file){
-  if (!file || !file.type.startsWith('image/')) return;
-  const img = new Image(); const url = URL.createObjectURL(file);
-  img.onload = () => {
-    // downscale to max 1800px on the long side, JPEG (keeps request < 4MB, faster for the model)
-    const max = 1800; let w = img.width, h = img.height; const s = Math.min(1, max/Math.max(w,h));
-    w = Math.round(w*s); h = Math.round(h*s);
-    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
-    const ctx = cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
-    const dataUrl = cv.toDataURL('image/jpeg', 0.92);
-    IMG = {b64: dataUrl.split(',')[1], type:'image/jpeg'};
-    $('#preview').src = dataUrl; $('#preview').classList.remove('hidden'); $('#dropText').classList.add('hidden');
-    $('#analyzeBtn').disabled = false; $('#exStatus').textContent = `${w}×${h}px 준비됨`; $('#exStatus').className='status';
-    URL.revokeObjectURL(url);
-  };
-  img.src = url;
+function fileToDataUrl(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
+function downscale(img, max=1800){
+  let w=img.width,h=img.height; const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+  const th=document.createElement('canvas'); const ts=Math.min(1,240/Math.max(w,h)); th.width=Math.round(w*ts); th.height=Math.round(h*ts); th.getContext('2d').drawImage(cv,0,0,th.width,th.height);
+  return {b64: cv.toDataURL('image/jpeg',0.92).split(',')[1], thumb: th.toDataURL('image/jpeg',0.7), w, h};
+}
+async function addImageFile(file, label){
+  const url = await fileToDataUrl(file);
+  await new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const d=downscale(img); QUEUE.push({id:uid(), b64:d.b64, type:'image/jpeg', thumb:d.thumb, label: label||file.name||'clipboard', status:'ready'}); res(); }; img.onerror=rej; img.src=url; });
+}
+async function addPdfFile(file){
+  if (!window.pdfjsLib){ alert('PDF 처리 라이브러리를 불러오지 못했습니다. 페이지를 새로고침 후 다시 시도하세요.'); return; }
+  const buf = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  for (let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i); const vp0 = page.getViewport({scale:1}); const scale = Math.min(2.2, 1800/Math.max(vp0.width,vp0.height)); const vp = page.getViewport({scale});
+    const cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height); const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    const img=new Image(); await new Promise(res=>{ img.onload=res; img.src=cv.toDataURL('image/jpeg',0.92); });
+    const d=downscale(img); QUEUE.push({id:uid(), b64:d.b64, type:'image/jpeg', thumb:d.thumb, label:`${file.name} p.${i}`, status:'ready'});
+  }
+}
+async function addFiles(files){
+  const list=[...files].filter(f=>f && (f.type.startsWith('image/') || f.type==='application/pdf' || /\.pdf$/i.test(f.name)));
+  if (!list.length) return;
+  $('#exStatus').textContent='파일 준비 중…'; $('#exStatus').className='status';
+  for (const f of list){ try { if (f.type==='application/pdf' || /\.pdf$/i.test(f.name)) await addPdfFile(f); else await addImageFile(f); } catch(e){ console.error(e); } }
+  renderQueue(); $('#exStatus').textContent = `${QUEUE.length}장 준비됨`;
+}
+function renderQueue(){
+  $('#queue').innerHTML = QUEUE.map((q,i)=>`<div class="qitem ${q.status}" title="${esc(q.label)}"><img src="${q.thumb}"><span class="qs">${i+1}${q.status==='done'?' ✓':q.status==='err'?' ✗':q.status==='busy'?' …':''}</span><button class="qx" data-x="${q.id}" title="제거">✕</button><div class="ql">${esc(q.seafarer||q.label)}</div></div>`).join('');
+  $('#queue').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ QUEUE=QUEUE.filter(q=>q.id!==b.dataset.x); renderQueue(); });
+  $('#dropText').classList.toggle('hidden', QUEUE.length>0); $('#moreHint').classList.toggle('hidden', QUEUE.length===0); drop.style.minHeight = QUEUE.length? '70px':'190px';
+  $('#analyzeBtn').disabled = !QUEUE.some(q=>q.status!=='done');
 }
 document.addEventListener('paste', e => {
   if ($('#app').classList.contains('hidden')) return;
-  for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) { setImage(it.getAsFile()); e.preventDefault(); break; }
+  const files=[]; for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) files.push(it.getAsFile());
+  if (files.length){ e.preventDefault(); addFiles(files); }
 });
-$('#file').onchange = e => setImage(e.target.files[0]);
+$('#file').onchange = e => { addFiles(e.target.files); e.target.value=''; };
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
-drop.addEventListener('drop', e => setImage(e.dataTransfer.files[0]));
-$('#clearImg').onclick = () => { IMG=null; $('#preview').classList.add('hidden'); $('#preview').src=''; $('#dropText').classList.remove('hidden'); $('#analyzeBtn').disabled=true; $('#exStatus').textContent=''; $('#file').value=''; };
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+$('#clearImg').onclick = () => { QUEUE=[]; renderQueue(); $('#exStatus').textContent=''; };
 
+/* ---------------- extraction (per image) → groups (per seafarer) ---------------- */
+function normPerson(s){ return String(s||'').toUpperCase().replace(/[^A-Z가-힣]/g,''); }
 $('#analyzeBtn').onclick = async () => {
-  if (!IMG) return;
-  const btn = $('#analyzeBtn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>분석 중…';
-  $('#exStatus').textContent=''; $('#exStatus').className='status';
-  try {
-    const j = await api('/api/extract',{method:'POST',body:JSON.stringify({image:IMG.b64, media_type:IMG.type})});
-    SEAFARER = j.seafarer; SEAFARER_RANK = j.rank || null;
-    ENTRIES = j.entries.map(e=>({vessel:e.vessel, matched:matchVessel(e.vessel), rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}));
-    $('#exStatus').textContent = `${ENTRIES.length}건 추출 · ${j.model} · ${(j.ms/1000).toFixed(1)}s`;
-    renderEntries();
-    if (ENTRIES.length) runPerformance();
-  } catch(err){ $('#exStatus').textContent = err.message; $('#exStatus').className='status err'; }
-  finally { btn.disabled=false; btn.textContent='승선기간 분석 (Claude)'; }
+  const todo = QUEUE.filter(q=>q.status!=='done'); if (!todo.length) return;
+  const btn=$('#analyzeBtn'); btn.disabled=true; btn.innerHTML='<span class="spinner"></span>분석 중…';
+  let done=0, fail=0;
+  for (const q of todo){
+    q.status='busy'; renderQueue(); $('#exStatus').textContent=`추출 중 ${done+fail+1}/${todo.length}…`;
+    try {
+      const j = await api('/api/extract',{method:'POST',body:JSON.stringify({image:q.b64, media_type:q.type})});
+      q.seafarer=j.seafarer||null; q.rank=j.rank||null; q.entries=j.entries||[]; q.status='done'; done++;
+      mergeIntoGroups(q);
+    } catch(err){ q.status='err'; q.error=err.message; fail++; }
+    renderQueue(); renderGroups();
+  }
+  btn.disabled=false; btn.textContent='승선기간 분석 (Claude)';
+  $('#exStatus').textContent = `${done}장 추출 완료${fail?` · ${fail}장 실패`:''} · 선원 ${REPORTS.length}명`; $('#exStatus').className = fail?'status err':'status';
+  if (REPORTS.some(r=>r.entries.length)) runAll();
 };
+function mergeIntoGroups(q){
+  const entries = (q.entries||[]).map(e=>({vessel:e.vessel, matched:matchVessel(e.vessel), rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}));
+  const key = normPerson(q.seafarer);
+  let g = key ? REPORTS.find(r=>normPerson(r.name)===key) : null;
+  if (!g){ g={id:uid(), name:q.seafarer||`선원 ${REPORTS.length+1}`, rank:q.rank||'', entries:[], cards:null}; REPORTS.push(g); }
+  if (!g.rank && q.rank) g.rank=q.rank;
+  entries.forEach(e=>{ if(!g.entries.some(x=>x.matched===e.matched && x.sign_on===e.sign_on)) g.entries.push(e); });
+  g.entries.sort((a,b)=>a.sign_on.localeCompare(b.sign_on));
+}
 
 /* ---------------- vessel matching ---------------- */
 function normName(s){ return String(s||'').toUpperCase().replace(/^(M\/V|MV|M\.V\.)\s+/,'').replace(/[^A-Z0-9]+/g,' ').trim(); }
@@ -421,63 +468,121 @@ function matchVessel(name){
   return bs>=0.6 ? best : '';
 }
 
-/* ---------------- entries table ---------------- */
-function renderEntries(){
-  const tb = $('#entries tbody');
-  $('#seafarer').innerHTML = SEAFARER ? `Seafarer: <b>${esc(SEAFARER)}</b>` : '';
-  $('#entriesEmpty').classList.toggle('hidden', ENTRIES.length>0);
-  $('#entries').classList.toggle('hidden', ENTRIES.length===0);
+/* ---------------- groups editor (per seafarer) ---------------- */
+function renderGroups(){
+  const box=$('#groups');
+  $('#entriesEmpty').classList.toggle('hidden', REPORTS.length>0);
   const opts = v => `<option value="">— 선박 선택 —</option>` + DATA.vessels.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
-  tb.innerHTML = ENTRIES.map((e,i)=>`<tr>
-    <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>
-        ${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
-    <td><input data-i="${i}" data-k="rank" value="${esc(e.rank)}" placeholder="Rank"></td>
-    <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${e.sign_on?'':'bad'}"></td>
-    <td><input data-i="${i}" data-k="sign_off" type="date" value="${esc(e.sign_off)}" placeholder="on board"></td>
-    <td><button class="btn sm" data-del="${i}" title="삭제">✕</button></td></tr>`).join('');
-  tb.querySelectorAll('input,select').forEach(el=>el.onchange = ev => { ENTRIES[+el.dataset.i][el.dataset.k] = el.value; el.classList.toggle('bad', !el.value && el.dataset.k!=='sign_off' && el.dataset.k!=='rank'); });
-  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ ENTRIES.splice(+b.dataset.del,1); renderEntries(); });
-  $('#runBtn').disabled = ENTRIES.length===0;
+  box.innerHTML = REPORTS.map((g,gi)=>`<div class="group" data-g="${g.id}">
+    <div class="gh"><span class="idx" style="background:var(--brand);color:#fff;font-weight:700;border-radius:6px;padding:1px 8px;font-size:12px">${gi+1}</span>
+      <input class="gn" data-gk="name" value="${esc(g.name)}" placeholder="선원 이름"><input class="gr" data-gk="rank" value="${esc(g.rank)}" placeholder="직급">
+      <span class="remark">${g.entries.length}개 승선기간</span><span style="flex:1"></span>
+      <button class="btn sm" data-add="${g.id}">+ 행</button><button class="btn sm" data-del="${g.id}" title="이 선원 제거">✕</button></div>
+    <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Sign on</th><th>Sign off</th><th></th></tr></thead>
+    <tbody>${g.entries.map((e,i)=>`<tr>
+      <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
+      <td><input data-i="${i}" data-k="rank" value="${esc(e.rank)}" placeholder="Rank"></td>
+      <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${e.sign_on?'':'bad'}"></td>
+      <td><input data-i="${i}" data-k="sign_off" type="date" value="${esc(e.sign_off)}"></td>
+      <td><button class="btn sm" data-rm="${i}" title="삭제">✕</button></td></tr>`).join('')}</tbody></table></div></div>`).join('');
+  box.querySelectorAll('.group').forEach(el=>{
+    const g=REPORTS.find(r=>r.id===el.dataset.g);
+    el.querySelectorAll('[data-gk]').forEach(inp=>inp.onchange=()=>{ g[inp.dataset.gk]=inp.value; });
+    el.querySelectorAll('tbody input,tbody select').forEach(inp=>inp.onchange=()=>{ g.entries[+inp.dataset.i][inp.dataset.k]=inp.value; inp.classList.toggle('bad', !inp.value && inp.dataset.k!=='sign_off' && inp.dataset.k!=='rank'); });
+    el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ g.entries.splice(+b.dataset.rm,1); renderGroups(); });
+    el.querySelector('[data-add]').onclick=()=>{ g.entries.push({vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}); renderGroups(); };
+    el.querySelector('[data-del]').onclick=()=>{ REPORTS=REPORTS.filter(r=>r!==g); renderGroups(); renderResults(); };
+  });
+  $('#runBtn').disabled = !REPORTS.some(g=>g.entries.length);
+  $('#docxAllBtn').disabled = !REPORTS.some(g=>g.cards);
 }
-$('#addRow').onclick = () => { ENTRIES.push({vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}); renderEntries(); };
-$('#runBtn').onclick = () => runPerformance();
+$('#addGroup').onclick=()=>{ REPORTS.push({id:uid(), name:`선원 ${REPORTS.length+1}`, rank:'', entries:[{vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}], cards:null}); renderGroups(); };
+$('#runBtn').onclick = () => runAll();
 
-/* ---------------- performance ---------------- */
-function inRange(d, a, b){ return d >= a && d <= b; }
-function runPerformance(){
-  const valid = ENTRIES.filter(e=>e.matched && e.sign_on);
-  if (!valid.length){ $('#runStatus').textContent='선박과 승선일을 입력하세요.'; $('#runStatus').className='status err'; return; }
-  $('#runStatus').textContent=''; $('#runStatus').className='status';
+/* ---------------- performance computation ---------------- */
+function inRange(d,a,b){ return d>=a && d<=b; }
+function computeReport(g){
+  const valid = g.entries.filter(e=>e.matched && e.sign_on); if (!valid.length){ g.cards=null; return false; }
   const todayISO = today.toISOString().slice(0,10);
-  const tot = {insp:0,defs:0,det:0,clean:0,uaN:0,uaH:0,lti:0};
-  const cards = valid.slice().sort((a,b)=>a.sign_on.localeCompare(b.sign_on)).map(e=>{
-    const a = e.sign_on, b = e.sign_off || todayISO;
-    const days = Math.round((new Date(b)-new Date(a))/86400000)+1;
-    const psc = DATA.psc.filter(p=>p.vessel===e.matched && inRange(p.date,a,b));
-    const ua  = DATA.ua.filter(u=>u.vessel===e.matched && inRange(u.date,a,b));
-    const lti = DATA.lti.filter(l=>l.vessel===e.matched && inRange(l.date,a,b));
-    const s = {insp:psc.length, defs:psc.reduce((x,p)=>x+p.def_count,0), det:psc.filter(p=>p.detention).length, clean:psc.filter(p=>p.def_count===0).length, uaN:ua.filter(u=>u.kpi==='Yes').length, uaH:ua.reduce((x,u)=>x+(u.kpi==='Yes'?u.hours:0),0), lti:lti.filter(l=>l.type==='LTIF').length};
+  const tot = {insp:0,defs:0,det:0,clean:0,uaN:0,uaH:0,lti:0,days:0};
+  g.cards = valid.slice().sort((a,b)=>a.sign_on.localeCompare(b.sign_on)).map(e=>{
+    const a=e.sign_on, b=e.sign_off||todayISO; const days=Math.round((new Date(b)-new Date(a))/86400000)+1;
+    const psc=DATA.psc.filter(p=>p.vessel===e.matched && inRange(p.date,a,b));
+    const ua=DATA.ua.filter(u=>u.vessel===e.matched && inRange(u.date,a,b));
+    const lti=DATA.lti.filter(l=>l.vessel===e.matched && inRange(l.date,a,b));
+    const s={insp:psc.length, defs:psc.reduce((x,p)=>x+p.def_count,0), det:psc.filter(p=>p.detention).length, clean:psc.filter(p=>p.def_count===0).length, uaN:ua.filter(u=>u.kpi==='Yes').length, uaH:ua.reduce((x,u)=>x+(u.kpi==='Yes'?u.hours:0),0), lti:lti.filter(l=>l.type==='LTIF').length, days};
     Object.keys(tot).forEach(k=>tot[k]+=s[k]);
     return {e,a,b,days,psc,ua,lti,s};
   });
-  tot.days = cards.reduce((x,c)=>x+c.days,0);
-  CREW_TOTALS = tot; renderTiles();
+  g.tot = tot;
+  const m={}; g.cards.forEach(c=>c.psc.forEach(p=>{ const k=p.mou||'Unknown'; m[k]=m[k]||{inspections:0,deficiency_free:0,deficiencies:0,detentions:0}; m[k].inspections++; m[k].deficiencies+=p.def_count; if(p.def_count===0)m[k].deficiency_free++; if(p.detention)m[k].detentions++; }));
+  Object.values(m).forEach(v=>v.flawless_rate_pct=Math.round(100*v.deficiency_free/v.inspections));
+  g.mou = m; g.assess=null; return true;
+}
+function latestCard(g){ return g.cards && g.cards.length ? g.cards.slice().sort((a,b)=>b.a.localeCompare(a.a))[0] : null; }
+async function runAll(){
+  const list = REPORTS.filter(g=>computeReport(g));
+  if (!list.length){ $('#runStatus').textContent='선박과 승선일을 입력하세요.'; $('#runStatus').className='status err'; return; }
+  $('#runStatus').textContent=''; $('#runStatus').className='status';
+  renderResults(); renderGroups();
+  $('#results').scrollIntoView({behavior:'smooth',block:'start'});
+  // assessments: sequential to stay within API rate limits
+  for (const g of list){ await runAssessment(g); }
+}
 
-  DATA.psc.forEach(p=>{ if(p.code30==null) p.code30 = p.deficiencies.filter(d=>/\b30\b/.test(d.code)).length; });
-  const rows = [];
-  cards.forEach(c=>{ c.psc.forEach(p=>rows.push({c,p})); });
-  const uaRows=[], ltiRows=[];
-  cards.forEach(c=>{ c.ua.forEach(u=>uaRows.push({c,u})); c.lti.forEach(l=>ltiRows.push({c,l})); });
+/* ---------------- results rendering (one block per seafarer) ---------------- */
+function renderResults(){
+  const box=$('#results');
+  const done = REPORTS.filter(g=>g.cards);
+  box.innerHTML = done.map((g,gi)=>`<section class="report" id="rep-${g.id}">
+    <div class="rtitle"><span class="idx">${gi+1} / ${done.length}</span><span class="remark">선원별 분석 결과</span></div>
+    <div class="who" id="who-${g.id}"></div>
+    <div class="tiles rtiles" id="tiles-${g.id}"></div>
+    <div class="legend"><span><i class="g"></i>당해년도(YTD) Fleet average보다 우수</span><span><i class="r"></i>Fleet average보다 저조</span><span>연환산 = 승선기간 합계 ÷ (승선일수/365)</span></div>
+    <div class="card period" style="margin-top:12px"><div class="hd"><h2>MOU별 Performance</h2><span class="hint">이 선원 flawless(무결함) rate vs 함대 ${Y} YTD · ${PY}</span></div><div class="bd" id="mou-${g.id}"></div></div>
+    <div class="card assess" id="assess-${g.id}" style="margin-top:12px">
+      <div class="hd"><h2>Performance Assessment</h2><span class="hint">Best shipping practice 기준 · 승선기간 선박 실적 vs Fleet average</span>
+        <span style="flex:1"></span><span class="status" id="astat-${g.id}"></span><button class="btn sm" data-re="${g.id}">다시 생성</button><button class="btn sm" data-docx="${g.id}" title="이 선원 보고서 Word 다운로드">📄 Word</button></div>
+      <div class="bd" id="abody-${g.id}"></div>
+    </div>
+    <div id="tables-${g.id}"></div>
+  </section>`).join('');
+  done.forEach(g=>{ renderWho(g); renderReportTiles(g); renderMou(g); renderTables(g); renderAssessBody(g); });
+  box.querySelectorAll('[data-re]').forEach(b=>b.onclick=()=>runAssessment(REPORTS.find(r=>r.id===b.dataset.re)));
+  box.querySelectorAll('[data-docx]').forEach(b=>b.onclick=()=>exportDocx([REPORTS.find(r=>r.id===b.dataset.docx)]));
+  box.querySelectorAll('[data-docx2]').forEach(b=>b.onclick=()=>exportDocx([REPORTS.find(r=>r.id===b.dataset.docx2)]));
+}
+function renderWho(g){
+  const lc=latestCard(g); const rank=lc?.e.rank||g.rank||''; const name=g.name||'조회 선원';
+  $(`#who-${g.id}`).innerHTML = `<div class="avatar">${esc(name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?')}</div>
+    <div class="whoinfo"><div class="name">${esc(name)}</div><div class="meta">${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${g.cards.length}개 승선기간 · ${g.tot.days}일</div></div>
+    <div class="whoright"><button class="btn primary sm" data-docx2="${g.id}" title="이 선원 보고서를 Word(.docx)로 다운로드">📄 Word 다운로드</button></div>`;
+  $(`#who-${g.id} [data-docx2]`).onclick=()=>exportDocx([g]);
+}
+function renderReportTiles(g){ $(`#tiles-${g.id}`).innerHTML = tilesHtml(g.tot); }
+function renderMou(g){
+  const fm1=fleetMou(String(Y)), fm0=fleetMou(String(PY));
+  const keys=Object.keys(g.mou).sort((a,b)=>g.mou[b].inspections-g.mou[a].inspections);
+  if (!keys.length){ $(`#mou-${g.id}`).innerHTML='<div class="none" style="color:var(--ink3)">승선 기간 중 PSC 검사 없음</div>'; return; }
+  $(`#mou-${g.id}`).innerHTML = `<div class="moublock">${keys.map(k=>{ const v=g.mou[k]; const f1=fm1[k], f0=fm0[k]; const fp1=f1?Math.round(100*f1.c/f1.n):null, fp0=f0?Math.round(100*f0.c/f0.n):null;
+    const cls = fp1==null ? '' : v.flawless_rate_pct>=fp1+5 ? 'good' : v.flawless_rate_pct<fp1-5 ? 'bad' : '';
+    return `<div class="mouc ${cls}"><div class="mn"><span>${esc(k)}</span><span class="remark">검사 ${v.inspections} · 결함 ${v.deficiencies}${v.detentions?` · <span style="color:var(--crit)">Det. ${v.detentions}</span>`:''}</span></div>
+      <div class="mrow"><span>이 선원 flawless</span><b>${v.flawless_rate_pct}% <span class="remark">(${v.deficiency_free}/${v.inspections})</span></b></div>
+      <div class="mb"><i style="width:${v.flawless_rate_pct}%"></i>${fp1!=null?`<s style="left:${fp1}%" title="함대 ${Y} YTD ${fp1}%"></s>`:''}</div>
+      <div class="mrow"><span>함대 ${Y} YTD</span><span class="fl">${fp1!=null?fp1+'% ('+f1.c+'/'+f1.n+')':'검사 없음'}</span></div>
+      <div class="mrow"><span>함대 ${PY}</span><span class="fl">${fp0!=null?fp0+'% ('+f0.c+'/'+f0.n+')':'검사 없음'}</span></div></div>`; }).join('')}</div>`;
+}
+function renderTables(g){
+  const cards=g.cards, tot=g.tot;
+  const rows=[],uaRows=[],ltiRows=[]; cards.forEach(c=>{ c.psc.forEach(p=>rows.push({c,p})); c.ua.forEach(u=>uaRows.push({c,u})); c.lti.forEach(l=>ltiRows.push({c,l})); });
   const vcell = c => `<td style="min-width:170px"><b>${esc(c.e.matched)}</b><div class="remark">${c.a} ~ ${c.e.sign_off||'on board'}${c.e.rank?` · ${esc(c.e.rank)}`:''}</div></td>`;
   const periodsHtml = `<div class="card period"><div class="hd"><h2>승선 기간 요약 (${cards.length})</h2></div>
     <div class="tbl-wrap"><table><thead><tr><th>Vessel</th><th>Period</th><th>Rank</th><th class="num">Days</th><th class="num">PSC</th><th class="num">Def.</th><th class="num">무결함 (%)</th><th class="num">Detention</th><th class="num">Events</th><th class="num">Unavail. (h)</th><th class="num">LTIF</th></tr></thead>
     <tbody>${cards.map(c=>`<tr><td><b>${esc(c.e.matched)}</b></td><td class="num">${c.a} ~ ${c.e.sign_off||'<i>on board</i>'}</td><td>${esc(c.e.rank)}</td><td class="num">${c.days}</td><td class="num">${c.s.insp}</td><td class="num">${c.s.defs}</td><td class="num">${c.s.clean}${c.s.insp?` <span class="remark">(${fmtN(100*c.s.clean/c.s.insp,0)}%)</span>`:''}</td><td class="num">${c.s.det||''}</td><td class="num">${c.s.uaN}</td><td class="num">${fmtN(c.s.uaH,1)}</td><td class="num">${c.s.lti||''}</td></tr>`).join('')}
-    <tr style="background:var(--surface2);font-weight:600"><td>합계</td><td></td><td></td><td class="num">${cards.reduce((x,c)=>x+c.days,0)}</td><td class="num">${tot.insp}</td><td class="num">${tot.defs}</td><td class="num">${tot.clean}${tot.insp?` <span class="remark">(${fmtN(100*tot.clean/tot.insp,0)}%)</span>`:''}</td><td class="num">${tot.det}</td><td class="num">${tot.uaN}</td><td class="num">${fmtN(tot.uaH,1)}</td><td class="num">${tot.lti}</td></tr></tbody></table></div></div>`;
-
+    <tr style="background:var(--surface2);font-weight:600"><td>합계</td><td></td><td></td><td class="num">${tot.days}</td><td class="num">${tot.insp}</td><td class="num">${tot.defs}</td><td class="num">${tot.clean}${tot.insp?` <span class="remark">(${fmtN(100*tot.clean/tot.insp,0)}%)</span>`:''}</td><td class="num">${tot.det}</td><td class="num">${tot.uaN}</td><td class="num">${fmtN(tot.uaH,1)}</td><td class="num">${tot.lti}</td></tr></tbody></table></div></div>`;
   const pscHtml = `<div class="card period"><div class="hd"><h2>1. PSC Inspections</h2>
       <div class="kpis"><span class="k">검사<b>${tot.insp}</b></span><span class="k">결함<b>${tot.defs}</b></span><span class="k">무결함<b>${tot.clean}${tot.insp?` (${fmtN(100*tot.clean/tot.insp,0)}%)`:''}</b></span><span class="k">Detention<b>${tot.det}</b></span></div></div>
-    ${rows.length?`<div class="sec mou"><h3>MOU별 Flawless rate</h3><div class="moulist">${(()=>{const m={};rows.forEach(({p})=>{const k=p.mou||'Unknown';m[k]=m[k]||{n:0,c:0,d:0,det:0};m[k].n++;m[k].d+=p.def_count;if(p.def_count===0)m[k].c++;if(p.detention)m[k].det++;});return Object.entries(m).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>{const pct=Math.round(100*v.c/v.n);return `<div class="mouitem"><div class="mn">${esc(k)}</div><div class="mv"><b class="${pct>=80?'g':pct>=60?'w':'c'}">${pct}%</b><span class="remark">flawless ${v.c}/${v.n}</span></div><div class="mb"><i style="width:${pct}%" class="${pct>=80?'g':pct>=60?'w':'c'}"></i></div><div class="remark">결함 ${v.d}${v.det?` · <span style="color:var(--crit)">Detention ${v.det}</span>`:''}</div></div>`;}).join('');})()}</div></div>
-    <div class="tbl-wrap"><table>
+    ${rows.length?`<div class="tbl-wrap"><table>
       <thead><tr><th>Vessel / Period</th><th>Date</th><th>Port / Country</th><th>MOU</th><th class="num">Def.</th><th class="num">Code 17</th><th class="num">Code 30</th><th>Result</th><th style="width:34%">Deficiencies</th></tr></thead>
       <tbody>${rows.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>`<tr>
         ${vcell(c)}<td class="num">${p.date}</td><td>${esc(p.port)}${p.country?`, ${esc(p.country)}`:''}</td><td>${esc(p.mou)}</td>
@@ -485,7 +590,6 @@ function runPerformance(){
         <td>${p.detention?'<span class="pill crit">⛔ Detention</span>':p.def_count===0?'<span class="pill good">✓ No deficiency</span>':'<span class="pill warn">Deficiency</span>'}</td>
         <td>${p.deficiencies.length?`<details class="defs"><summary>${p.deficiencies.length}건 보기</summary><ul>${p.deficiencies.map(d=>`<li><span class="code ${/\b30\b/.test(d.code)?'c30':/\b17\b/.test(d.code)?'c17':''}">${esc(d.code)||'–'}</span><span>${esc(d.desc)}${d.item?` <span class="remark">[${esc(d.item)}]</span>`:''}</span></li>`).join('')}</ul></details>`:''}</td>
       </tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 PSC 검사 없음</div>'}</div>`;
-
   const uaHtml = `<div class="card period"><div class="hd"><h2>2. Unplanned Unavailability — Unscheduled stoppage</h2>
       <div class="kpis"><span class="k">건수<b>${tot.uaN}</b></span><span class="k">합계<b>${fmtN(tot.uaH,1)} h</b></span><span class="k">≥ 24h<b>${uaRows.filter(x=>x.u.hours>=24).length}</b></span></div></div>
     ${uaRows.length?`<div class="tbl-wrap"><table>
@@ -494,87 +598,64 @@ function runPerformance(){
         <td class="num">${u.hours>=24?`<span class="pill warn">⚠ ${fmtH(u.hours)}</span>`:fmtH(u.hours)}</td>
         <td>${u.hours>=24?esc(u.remark):`<span class="remark">${esc(u.remark)}</span>`}</td>
         <td class="remark">${esc(u.docmap)}${u.kpi!=='Yes'?` <span class="pill muted">${esc(u.kpi||'KPI ?')}</span>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 Unscheduled stoppage 없음</div>'}</div>`;
-
   const ltiHtml = `<div class="card period"><div class="hd"><h2>3. LTIF / LTSF</h2><span class="hint">WSMK KPI → Crew Data1</span>
       <div class="kpis"><span class="k">LTIF<b>${tot.lti}</b></span><span class="k">LTSF<b>${ltiRows.filter(x=>x.l.type==='LTSF').length}</b></span></div></div>
     ${ltiRows.length?`<div class="tbl-wrap"><table>
       <thead><tr><th>Vessel / Period</th><th>Date</th><th>Type</th><th>Rank</th><th>Description</th></tr></thead>
       <tbody>${ltiRows.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>`<tr>${vcell(c)}<td class="num">${l.date}</td><td><span class="pill ${l.type==='LTIF'?'crit':'neutral'}">${esc(l.type)}</span></td><td>${esc(l.rank)}</td><td>${esc(l.desc)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 LTI/LTS 없음</div>'}</div>`;
-
-  $('#results').innerHTML = periodsHtml + pscHtml + uaHtml + ltiHtml + (cards.some(c=>c.a < '2014-01-01')?'<div class="notice">PSC 데이터는 2014년, KPI 데이터는 2016년부터 색인되어 있어 그 이전 승선기간은 실적이 표시되지 않습니다.</div>':'');
-  LAST_CARDS = cards; LAST_TOT = tot; LAST_ASSESS = null;
-  renderWho();
-  runAssessment();
-  $('#results').scrollIntoView({behavior:'smooth',block:'start'});
+  $(`#tables-${g.id}`).innerHTML = periodsHtml + pscHtml + uaHtml + ltiHtml + (cards.some(c=>c.a < '2014-01-01')?'<div class="notice">PSC 데이터는 2014년, KPI 데이터는 2016년부터 색인되어 있어 그 이전 승선기간은 실적이 표시되지 않습니다.</div>':'');
 }
 
-/* ---------------- AI assessment (summary + SWOT) ---------------- */
-let LAST_CARDS=null, LAST_TOT=null, LAST_PAYLOAD=null;
-$('#assessBtn').onclick = () => runAssessment();
-async function runAssessment(){
-  if (!LAST_CARDS) return;
-  const box = $('#assess'); box.classList.remove('hidden');
-  $('#assessStatus').textContent=''; $('#assessStatus').className='status';
-  $('#assessBody').innerHTML = '<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Claude가 실적을 분석하고 있습니다…</div>';
-  const n1 = Math.max(1, +$('#fleetNow').value||1), n0 = Math.max(1, +$('#fleetPrev').value||1);
-  const fa = yearStats(String(Y)), fb = yearStats(String(PY));
+/* ---------------- AI assessment (per seafarer) ---------------- */
+function buildPayload(g){
+  const {n1,n0}=fleetN(); const fa=yearStats(String(Y)), fb=yearStats(String(PY)); fa._n=n1; fb._n=n0;
   const per = n => ({insp_per_vessel:+(n.insp/n._n).toFixed(2), def_per_vessel:+(n.defs/n._n).toFixed(2), deficiency_free_rate_pct: n.insp?Math.round(100*n.clean/n.insp):null, detentions_total:n.det, unsched_stoppage_hours_per_vessel:+(n.uaH/n._n).toFixed(1), unsched_stoppage_events_per_vessel:+(n.uaN/n._n).toFixed(2), ltif_count_total:n.lti});
-  fa._n=n1; fb._n=n0;
-  const payload = {
-    seafarer: SEAFARER || null,
-    today: today.toISOString().slice(0,10),
-    fleet_average_per_vessel: { [Y+' YTD']: per(fa), [String(PY)]: per(fb) },
-    totals: {...LAST_TOT, days_on_board: LAST_CARDS.reduce((x,c)=>x+c.days,0)},
-    psc_by_mou: (()=>{const m={};LAST_CARDS.forEach(c=>c.psc.forEach(p=>{const k=p.mou||'Unknown';m[k]=m[k]||{inspections:0,deficiency_free:0,deficiencies:0,detentions:0};m[k].inspections++;m[k].deficiencies+=p.def_count;if(p.def_count===0)m[k].deficiency_free++;if(p.detention)m[k].detentions++;}));Object.values(m).forEach(v=>v.flawless_rate_pct=Math.round(100*v.deficiency_free/v.inspections));return m;})(),
-    periods: LAST_CARDS.map(c=>({
-      vessel:c.e.matched, rank:c.e.rank||null, sign_on:c.a, sign_off:c.e.sign_off||'on board', days:c.days,
-      stats:c.s,
+  const fm1=fleetMou(String(Y)); const fleet_mou={}; Object.entries(fm1).forEach(([k,v])=>fleet_mou[k]=Math.round(100*v.c/v.n));
+  return { seafarer:g.name||null, rank:g.rank||null, today: today.toISOString().slice(0,10),
+    fleet_average_per_vessel:{ [Y+' YTD']:per(fa), [String(PY)]:per(fb) }, fleet_flawless_rate_by_mou_pct_ytd: fleet_mou,
+    totals:{...g.tot, days_on_board:g.tot.days}, psc_by_mou:g.mou,
+    periods:g.cards.map(c=>({ vessel:c.e.matched, rank:c.e.rank||null, sign_on:c.a, sign_off:c.e.sign_off||'on board', days:c.days, stats:c.s,
       psc:c.psc.map(p=>({date:p.date, port:p.port, country:p.country, mou:p.mou, deficiencies:p.def_count, code17:p.code17, code30:p.code30, detention:p.detention, items:p.deficiencies.slice(0,12).map(d=>`[${d.code}] ${d.desc.slice(0,120)}`)})),
       unscheduled_stoppage:c.ua.map(u=>({date:u.date, hours:u.hours, remark:u.remark, kpi:u.kpi})),
-      lti:c.lti.map(l=>({date:l.date, type:l.type, rank:l.rank, desc:l.desc})),
-    })),
-  };
-  try {
-    const j = await api('/api/assess',{method:'POST',body:JSON.stringify(payload)});
-    LAST_ASSESS = j; LAST_PAYLOAD = payload;
-    const cls = /above/i.test(j.rating)?'good':/below/i.test(j.rating)?'crit':'neutral';
-    const li = a => (a||[]).map(x=>`<li>${esc(x)}</li>`).join('') || '<li class="remark">–</li>';
-    $('#assessBody').innerHTML = `
-      <div class="verdict"><span class="who">${esc(SEAFARER||'조회 선원')}</span><span class="pill ${cls}">${esc(j.rating||'')}</span>
-        <span class="remark">${LAST_CARDS.length}개 승선기간 · ${payload.totals.days_on_board}일 · PSC ${LAST_TOT.insp} · Def. ${LAST_TOT.defs} · Detention ${LAST_TOT.det} · Unavail. ${fmtN(LAST_TOT.uaH,1)} h (${LAST_TOT.uaN}) · LTIF ${LAST_TOT.lti}</span></div>
-      <p class="sum">${esc(j.summary||'')}</p>
-      <div class="swot">
-        <div class="q s"><h4>💪 Strengths</h4><ul>${li(j.swot?.strengths)}</ul></div>
-        <div class="q w"><h4>⚠️ Weaknesses</h4><ul>${li(j.swot?.weaknesses)}</ul></div>
-        <div class="q o"><h4>🎯 Opportunities</h4><ul>${li(j.swot?.opportunities)}</ul></div>
-        <div class="q t"><h4>🌊 Threats</h4><ul>${li(j.swot?.threats)}</ul></div>
-      </div>
-      ${j.recommendation?`<div class="rec"><b>Recommendation</b> — ${esc(j.recommendation)}</div>`:''}
-      <div class="caveat">※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude가 생성한 참고용 평가입니다. 개인 귀책 판단 시에는 사고보고서·감사 결과 등 원자료를 확인하십시오.</div>`;
-    $('#assessStatus').textContent = `${j.model} · ${(j.ms/1000).toFixed(1)}s`;
-  } catch(err){
-    $('#assessBody').innerHTML=''; $('#assessStatus').textContent = err.message; $('#assessStatus').className='status err';
-  }
+      lti:c.lti.map(l=>({date:l.date, type:l.type, rank:l.rank, desc:l.desc})) })) };
 }
-
-/* ---------------- seafarer banner ---------------- */
-function latestCard(){ if(!LAST_CARDS||!LAST_CARDS.length) return null; return LAST_CARDS.slice().sort((a,b)=>b.a.localeCompare(a.a))[0]; }
-function renderWho(){
-  const box=$('#who'); if(!LAST_CARDS||!LAST_CARDS.length){box.classList.add('hidden');return;}
-  const lc = latestCard();
-  const rank = lc.e.rank || SEAFARER_RANK || '';
-  const name = SEAFARER || '조회 선원';
-  $('#whoName').textContent = name;
-  $('#whoAvatar').textContent = name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
-  $('#whoMeta').innerHTML = `${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${LAST_CARDS.length}개 승선기간 · ${LAST_CARDS.reduce((x,c)=>x+c.days,0)}일`;
-  box.classList.remove('hidden');
+async function runAssessment(g){
+  if (!g.cards) return;
+  g.assess=null; g.busy=true; renderAssessBody(g);
+  try {
+    g.payload = buildPayload(g);
+    const j = await api('/api/assess',{method:'POST',body:JSON.stringify(g.payload)});
+    g.assess=j; g.err=null;
+  } catch(err){ g.err=err.message; }
+  g.busy=false; renderAssessBody(g); renderGroups();
+}
+function renderAssessBody(g){
+  const body=$(`#abody-${g.id}`), st=$(`#astat-${g.id}`); if(!body) return;
+  if (g.busy){ body.innerHTML='<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Claude가 실적을 분석하고 있습니다…</div>'; st.textContent=''; st.className='status'; return; }
+  if (g.err){ body.innerHTML=''; st.textContent=g.err; st.className='status err'; return; }
+  const j=g.assess; if(!j){ body.innerHTML='<div class="none" style="color:var(--ink3)">평가 대기 중…</div>'; st.textContent=''; return; }
+  const cls = /above/i.test(j.rating)?'good':/below/i.test(j.rating)?'crit':'neutral';
+  const li = a => (a||[]).map(x=>`<li>${esc(x)}</li>`).join('') || '<li class="remark">–</li>';
+  body.innerHTML = `
+    <div class="verdict"><span class="who">${esc(g.name||'조회 선원')}</span><span class="pill ${cls}">${esc(j.rating||'')}</span>
+      <span class="remark">${g.cards.length}개 승선기간 · ${g.tot.days}일 · PSC ${g.tot.insp} · Def. ${g.tot.defs} · Detention ${g.tot.det} · Unavail. ${fmtN(g.tot.uaH,1)} h (${g.tot.uaN}) · LTIF ${g.tot.lti}</span></div>
+    <p class="sum">${esc(j.summary||'')}</p>
+    <div class="swot">
+      <div class="q s"><h4>💪 Strengths</h4><ul>${li(j.swot?.strengths)}</ul></div>
+      <div class="q w"><h4>⚠️ Weaknesses</h4><ul>${li(j.swot?.weaknesses)}</ul></div>
+      <div class="q o"><h4>🎯 Opportunities</h4><ul>${li(j.swot?.opportunities)}</ul></div>
+      <div class="q t"><h4>🌊 Threats</h4><ul>${li(j.swot?.threats)}</ul></div>
+    </div>
+    ${j.recommendation?`<div class="rec"><b>Recommendation</b> — ${esc(j.recommendation)}</div>`:''}
+    <div class="caveat">※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude가 생성한 참고용 평가입니다. 개인 귀책 판단 시에는 사고보고서·감사 결과 등 원자료를 확인하십시오.</div>`;
+  st.textContent = `${j.model} · ${(j.ms/1000).toFixed(1)}s`;
 }
 
 /* ---------------- Word (.docx) export — no external library ---------------- */
-$('#docxBtn').onclick = $('#docxBtn2').onclick = () => exportDocx();
+$('#docxAllBtn').onclick = () => exportDocx(REPORTS.filter(g=>g.cards));
 const X = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function run(t,o={}){ return `<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}<w:sz w:val="${(o.size||10)*2}"/><w:rFonts w:ascii="Malgun Gothic" w:hAnsi="Malgun Gothic" w:eastAsia="Malgun Gothic"/></w:rPr><w:t xml:space="preserve">${X(t)}</w:t></w:r>`; }
-function para(t,o={}){ const runs = Array.isArray(t)? t.map(r=>run(r.t,r)).join('') : run(t,o); return `<w:p><w:pPr>${o.style?`<w:pStyle w:val="${o.style}"/>`:''}<w:spacing w:before="${o.before??60}" w:after="${o.after??60}"/>${o.align?`<w:jc w:val="${o.align}"/>`:''}${o.shade?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>`:''}</w:pPr>${runs}</w:p>`; }
+function para(t,o={}){ const runs = Array.isArray(t)? t.map(r=>run(r.t,r)).join('') : run(t,o); return `<w:p><w:pPr>${o.pageBreak?'<w:pageBreakBefore/>':''}<w:spacing w:before="${o.before??60}" w:after="${o.after??60}"/>${o.align?`<w:jc w:val="${o.align}"/>`:''}</w:pPr>${runs}</w:p>`; }
 function h1(t){ return para(t,{b:true,size:16,color:'0B3D6B',before:240,after:80}); }
 function h2(t){ return para(t,{b:true,size:12.5,color:'12579A',before:200,after:60}); }
 function bullet(t){ return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/><w:ind w:left="360" w:hanging="200"/></w:pPr>${run('• '+t,{size:10})}</w:p>`; }
@@ -584,90 +665,86 @@ function table(header, rows, widths){
   const tr=(cells,hdr)=>`<w:tr>${hdr?'<w:trPr><w:tblHeader/></w:trPr>':''}${cells.map((c,i)=>cell(c,i,hdr)).join('')}</w:tr>`;
   return `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:left w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:right w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="E2E8F0"/><w:insideV w:val="single" w:sz="4" w:color="E2E8F0"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x=>`<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${tr(header,true)}${rows.map(r=>tr(r,false)).join('')}</w:tbl>${para('',{before:0,after:0})}`;
 }
-function buildReportXml(){
-  const lc = latestCard(); const name = SEAFARER||'조회 선원'; const rank = lc?.e.rank||SEAFARER_RANK||'-';
-  const n1 = Math.max(1,+$('#fleetNow').value||1), n0 = Math.max(1,+$('#fleetPrev').value||1);
-  const fa = yearStats(String(Y)), fb = yearStats(String(PY)); const t = LAST_TOT;
-  const f = (v,d=2)=>fmtN(v,d);
-  let b = '';
-  b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40});
+function reportBody(g, first){
+  const lc=latestCard(g); const name=g.name||'조회 선원'; const rank=lc?.e.rank||g.rank||'-';
+  const {n1,n0}=fleetN(); const fa=yearStats(String(Y)), fb=yearStats(String(PY)); const t=g.tot; const f=(v,d=2)=>fmtN(v,d);
+  let b='';
+  b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40,pageBreak:!first});
   b += para(`Wilhelmsen Ship Management Korea · HSEQ · 생성일 ${today.toISOString().slice(0,10)}`,{size:9,color:'64748B',after:160});
   b += h1('1. 선원 정보');
-  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${LAST_CARDS.length}개 · 총 ${LAST_CARDS.reduce((x,c)=>x+c.days,0)}일`]],[2400,7200]);
-  b += h1('2. Fleet Average per Vessel vs 본인 실적');
-  b += table(['지표',`${Y} YTD (척당)`,`${PY} (척당)`,'본인 (승선기간 합계)'],[
-    ['PSC Inspections', f(fa.insp/n1), f(fb.insp/n0), `${t.insp}`],
-    ['PSC Deficiencies', f(fa.defs/n1), f(fb.defs/n0), `${t.defs}`],
-    ['Deficiency-free rate', fa.insp?f(100*fa.clean/fa.insp,0)+' %':'–', fb.insp?f(100*fb.clean/fb.insp,0)+' %':'–', t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)} %)`:'–'],
-    ['PSC Detentions (fleet total)', `${fa.det}`, `${fb.det}`, `${t.det}`],
-    ['Unplanned Unavailability (h)', f(fa.uaH/n1,1), f(fb.uaH/n0,1), `${f(t.uaH,1)} h (${t.uaN}건)`],
-    ['LTIF (count)', `${fa.lti}`, `${fb.lti}`, `${t.lti}`],
-  ],[3000,2000,2000,2600]);
-  b += h1('3. Performance Assessment (Best shipping practice 기준)');
-  if (LAST_ASSESS) {
-    const a = LAST_ASSESS;
+  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${g.cards.length}개 · 총 ${t.days}일`]],[2400,7200]);
+  b += h1('2. Fleet Average per Vessel vs 본인 실적 (연환산)');
+  const yrs=Math.max(t.days,1)/365;
+  b += table(['지표',`${Y} YTD (척당)`,`${PY} (척당)`,'본인 합계','본인 연환산 (척·년)','판정'],[
+    ['PSC Inspections', f(fa.insp/n1), f(fb.insp/n0), `${t.insp}`, f(t.insp/yrs), '-'],
+    ['PSC Deficiencies', f(fa.defs/n1), f(fb.defs/n0), `${t.defs}`, f(t.defs/yrs), judge({better:'low',crew:t.defs/yrs,now:fa.defs/n1},t).txt],
+    ['Deficiency-free rate', fa.insp?f(100*fa.clean/fa.insp,0)+' %':'–', fb.insp?f(100*fb.clean/fb.insp,0)+' %':'–', t.insp?`${t.clean}/${t.insp}`:'–', t.insp?f(100*t.clean/t.insp,0)+' %':'–', t.insp?judge({better:'high',crew:100*t.clean/t.insp,now:fa.insp?100*fa.clean/fa.insp:null},t).txt:'-'],
+    ['PSC Detentions', `${fa.det}건 (${f(fa.det/n1)}/vsl)`, `${fb.det}건 (${f(fb.det/n0)}/vsl)`, `${t.det}`, f(t.det/yrs), judge({better:'low',crew:t.det/yrs,now:fa.det/n1},t).txt],
+    ['Unplanned Unavailability (h)', f(fa.uaH/n1,1), f(fb.uaH/n0,1), `${f(t.uaH,1)} h (${t.uaN}건)`, f(t.uaH/yrs,1), judge({better:'low',crew:t.uaH/yrs,now:fa.uaH/n1},t).txt],
+    ['LTIF', `${fa.lti}건 (${f(fa.lti/n1)}/vsl)`, `${fb.lti}건 (${f(fb.lti/n0)}/vsl)`, `${t.lti}`, f(t.lti/yrs), judge({better:'low',crew:t.lti/yrs,now:fa.lti/n1},t).txt],
+  ],[2300,1500,1500,1400,1500,1400]);
+  b += h1('3. MOU별 Performance (flawless rate)');
+  const fm1=fleetMou(String(Y)), fm0=fleetMou(String(PY)); const mk=Object.keys(g.mou).sort((a,c)=>g.mou[c].inspections-g.mou[a].inspections);
+  b += mk.length ? table(['MOU','검사','무결함','본인 flawless','함대 '+Y+' YTD','함대 '+PY,'결함','Detention'], mk.map(k=>{const v=g.mou[k],f1=fm1[k],f0=fm0[k]; return [k,`${v.inspections}`,`${v.deficiency_free}`,`${v.flawless_rate_pct} %`,f1?`${Math.round(100*f1.c/f1.n)} % (${f1.c}/${f1.n})`:'-',f0?`${Math.round(100*f0.c/f0.n)} % (${f0.c}/${f0.n})`:'-',`${v.deficiencies}`,`${v.detentions}`];}),[1900,900,1000,1300,1500,1500,800,700]) : para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:'94A3B8'});
+  b += h1('4. Performance Assessment (Best shipping practice 기준)');
+  if (g.assess) {
+    const a=g.assess;
     b += para([{t:'판정: ',b:true,size:10.5},{t:a.rating||'',b:true,size:10.5,color:/above/i.test(a.rating)?'1A7F4B':/below/i.test(a.rating)?'B3261E':'12579A'}]);
     b += para(a.summary||'',{size:10});
-    const q=[['Strengths',a.swot?.strengths,'1A7F4B'],['Weaknesses',a.swot?.weaknesses,'B3261E'],['Opportunities',a.swot?.opportunities,'12579A'],['Threats',a.swot?.threats,'A05A00']];
-    q.forEach(([k,arr,c])=>{ b += para(k,{b:true,size:10.5,color:c,before:120,after:40}); (arr||[]).forEach(x=>b+=bullet(x)); });
+    [['Strengths',a.swot?.strengths,'1A7F4B'],['Weaknesses',a.swot?.weaknesses,'B3261E'],['Opportunities',a.swot?.opportunities,'12579A'],['Threats',a.swot?.threats,'A05A00']].forEach(([k,arr,c])=>{ b+=para(k,{b:true,size:10.5,color:c,before:120,after:40}); (arr||[]).forEach(x=>b+=bullet(x)); });
     if (a.recommendation) b += para([{t:'Recommendation: ',b:true,size:10},{t:a.recommendation,size:10}],{before:120});
     b += para(`※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude(${a.model||''})가 생성한 참고용 평가임. 개인 귀책 판단 시 사고보고서·감사 결과 등 원자료 확인 필요.`,{size:8.5,color:'94A3B8',before:80});
-  } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 Performance Assessment 생성 후 다시 다운로드하십시오)',{i:true,size:9.5,color:'94A3B8'});
-  b += h1('4. 승선 기간 요약');
+  } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 생성 완료 후 다시 다운로드하십시오)',{i:true,size:9.5,color:'94A3B8'});
+  b += h1('5. 승선 기간 요약');
   b += table(['Vessel','Period','Rank','Days','PSC','Def.','무결함 (%)','Det.','Events','Unavail.(h)','LTIF'],
-    LAST_CARDS.map(c=>[c.e.matched,`${c.a} ~ ${c.e.sign_off||'on board'}`,c.e.rank||'',`${c.days}`,`${c.s.insp}`,`${c.s.defs}`,c.s.insp?`${c.s.clean} (${f(100*c.s.clean/c.s.insp,0)}%)`:`${c.s.clean}`,`${c.s.det}`,`${c.s.uaN}`,f(c.s.uaH,1),`${c.s.lti}`])
-    .concat([['합계','','',`${LAST_CARDS.reduce((x,c)=>x+c.days,0)}`,`${t.insp}`,`${t.defs}`,t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,`${t.det}`,`${t.uaN}`,f(t.uaH,1),`${t.lti}`]]),
-    [1700,1900,600,600,600,600,1000,600,700,800,500]);
-  const psc=[],ua=[],lti=[]; LAST_CARDS.forEach(c=>{c.psc.forEach(p=>psc.push({c,p}));c.ua.forEach(u=>ua.push({c,u}));c.lti.forEach(l=>lti.push({c,l}));});
-  b += h1(`5. PSC Inspections (${psc.length}) — 검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det}`);
-  if (LAST_PAYLOAD?.psc_by_mou) { b += h2('MOU별 Flawless rate'); b += table(['MOU','검사','무결함','Flawless %','결함','Detention'], Object.entries(LAST_PAYLOAD.psc_by_mou).sort((x,y)=>y[1].inspections-x[1].inspections).map(([k,v])=>[k,`${v.inspections}`,`${v.deficiency_free}`,`${v.flawless_rate_pct} %`,`${v.deficiencies}`,`${v.detentions}`]),[2600,1400,1400,1400,1400,1400]); }
-  if (psc.length) {
+    g.cards.map(c=>[c.e.matched,`${c.a} ~ ${c.e.sign_off||'on board'}`,c.e.rank||'',`${c.days}`,`${c.s.insp}`,`${c.s.defs}`,c.s.insp?`${c.s.clean} (${f(100*c.s.clean/c.s.insp,0)}%)`:`${c.s.clean}`,`${c.s.det}`,`${c.s.uaN}`,f(c.s.uaH,1),`${c.s.lti}`])
+    .concat([['합계','','',`${t.days}`,`${t.insp}`,`${t.defs}`,t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,`${t.det}`,`${t.uaN}`,f(t.uaH,1),`${t.lti}`]]),[1700,1900,600,600,600,600,1000,600,700,800,500]);
+  const psc=[],ua=[],lti=[]; g.cards.forEach(c=>{c.psc.forEach(p=>psc.push({c,p}));c.ua.forEach(u=>ua.push({c,u}));c.lti.forEach(l=>lti.push({c,l}));});
+  b += h1(`6. PSC Inspections (${psc.length}) — 검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det}`);
+  if (psc.length){
     b += table(['Vessel','Date','Port / Country','MOU','Def.','Code 17','Code 30','Result'], psc.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>[c.e.matched,p.date,`${p.port}${p.country?', '+p.country:''}`,p.mou,`${p.def_count}`,`${p.code17||''}`,`${p.code30||''}`,p.detention?'DETENTION':p.def_count===0?'No deficiency':'Deficiency']),[1800,1000,2000,1300,600,700,700,1500]);
-    const withDef = psc.filter(x=>x.p.deficiencies.length);
-    if (withDef.length){ b += h2('결함 상세'); withDef.forEach(({c,p})=>{ b += para(`${c.e.matched} · ${p.date} · ${p.port} (${p.mou})${p.detention?' · DETENTION':''}`,{b:true,size:9.5,before:100,after:20}); p.deficiencies.forEach(d=>b+=bullet(`[${d.code||'-'}] ${d.desc}${d.item?` [${d.item}]`:''}`)); }); }
+    const withDef=psc.filter(x=>x.p.deficiencies.length);
+    if (withDef.length){ b+=h2('결함 상세'); withDef.forEach(({c,p})=>{ b+=para(`${c.e.matched} · ${p.date} · ${p.port} (${p.mou})${p.detention?' · DETENTION':''}`,{b:true,size:9.5,before:100,after:20}); p.deficiencies.forEach(d=>b+=bullet(`[${d.code||'-'}] ${d.desc}${d.item?` [${d.item}]`:''}`)); }); }
   } else b += para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:'94A3B8'});
-  b += h1(`6. Unplanned Unavailability — Unscheduled stoppage (${ua.length}건 · ${f(t.uaH,1)} h)`);
+  b += h1(`7. Unplanned Unavailability — Unscheduled stoppage (${ua.length}건 · ${f(t.uaH,1)} h)`);
   b += ua.length ? table(['Vessel','Date','Hours','Remark','Docmap'], ua.sort((x,y)=>x.u.date.localeCompare(y.u.date)).map(({c,u})=>[c.e.matched,u.date,`${f(u.hours,1)}${u.hours>=24?` (≥24h, ${f(u.hours/24,1)}d)`:''}`,u.remark+(u.kpi!=='Yes'?` [${u.kpi}]`:''),u.docmap]),[1800,1000,1300,4000,1500]) : para('승선 기간 중 Unscheduled stoppage 없음',{i:true,size:9.5,color:'94A3B8'});
-  b += h1(`7. LTIF / LTSF (${lti.length})`);
+  b += h1(`8. LTIF / LTSF (${lti.length})`);
   b += lti.length ? table(['Vessel','Date','Type','Rank','Description'], lti.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>[c.e.matched,l.date,l.type,l.rank,l.desc]),[1800,1000,800,900,5100]) : para('승선 기간 중 LTI/LTS 없음',{i:true,size:9.5,color:'94A3B8'});
   b += para(`Sources: ${DATA.sources.psc} (Database) · ${DATA.sources.kpi} (Tech Data / Crew Data1) · index ${DATA.generated}`,{size:8,color:'94A3B8',before:240});
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${b}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  return b;
 }
-// --- minimal ZIP (store) writer ---
 const CRC_T = (()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
 function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
-function zipStore(files){ // files: [{name, data(string)}]
+function zipStore(files){
   const enc=new TextEncoder(); const parts=[]; const central=[]; let off=0;
   const u16=v=>[v&255,(v>>8)&255], u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
-  const dt = (()=>{const d=new Date();return {t:((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF, d:(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF};})();
+  const dt=(()=>{const d=new Date();return {t:((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF, d:(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF};})();
   for (const f of files){ const nm=enc.encode(f.name), data=enc.encode(f.data), crc=crc32(data);
     const lh=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(dt.t),...u16(dt.d),...u32(crc),...u32(data.length),...u32(data.length),...u16(nm.length),...u16(0)]);
     parts.push(lh,nm,data);
     central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(dt.t),...u16(dt.d),...u32(crc),...u32(data.length),...u32(data.length),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
     off += lh.length+nm.length+data.length; }
-  const cdSize = central.reduce((a,x)=>a+x.length,0);
+  const cdSize=central.reduce((a,x)=>a+x.length,0);
   const eocd=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
   return new Blob([...parts,...central,eocd],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 }
-function exportDocx(){
-  if (!LAST_CARDS||!LAST_CARDS.length){ alert('먼저 Performance 조회를 실행하세요.'); return; }
+function exportDocx(list){
+  list=(list||[]).filter(g=>g&&g.cards); if(!list.length){ alert('먼저 Performance 조회를 실행하세요.'); return; }
+  const body = list.map((g,i)=>reportBody(g,i===0)).join('');
+  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
   const files=[
     {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'},
     {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
     {name:'word/_rels/document.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'},
-    {name:'word/document.xml',data:buildReportXml()},
+    {name:'word/document.xml',data:xml},
   ];
-  const blob = zipStore(files);
-  const nm = (SEAFARER||'crew').replace(/[^\w가-힣]+/g,'_');
+  const blob=zipStore(files);
+  const nm = list.length===1 ? (list[0].name||'crew').replace(/[^\w가-힣]+/g,'_') : `${list.length}명`;
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`WSMK_Crew_Performance_${nm}_${today.toISOString().slice(0,10)}.docx`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
 }
 
-/* ---------------- header: reset to initial screen ---------------- */
-function resetApp(){
-  try { IMG=null; ENTRIES=[]; SEAFARER=null; SEAFARER_RANK=null; LAST_CARDS=null; LAST_TOT=null; LAST_ASSESS=null; CREW_TOTALS=null; } catch(e){}
-  // hard reload with cache-busting so the newest deployed version is always loaded
-  location.replace(location.pathname + '?r=' + Date.now());
-}
+/* ---------------- header: reset ---------------- */
+function resetApp(){ location.replace(location.pathname + '?r=' + Date.now()); }
 
 /* ---------------- start ---------------- */
 if (TOKEN) boot();
