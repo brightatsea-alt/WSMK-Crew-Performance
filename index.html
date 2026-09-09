@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WSMK Crew Performance</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b3d6b'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='Arial' font-weight='700'%3EW%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f3f5f8;--surface:#fff;--surface2:#f8fafc;--line:#e2e8f0;--line2:#cbd5e1;
+  --ink:#0f172a;--ink2:#475569;--ink3:#94a3b8;
+  --brand:#0b3d6b;--brand2:#12579a;--brand-soft:#e6eef7;
+  --good:#1a7f4b;--good-soft:#e3f5ea;--warn:#a05a00;--warn-soft:#fff2df;--crit:#b3261e;--crit-soft:#fbe7e6;
+  --radius:12px;--shadow:0 1px 2px rgba(15,23,42,.05),0 6px 20px -8px rgba(15,23,42,.12);
+  font-family:"Segoe UI",system-ui,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+button{font:inherit;cursor:pointer}
+input,select{font:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 20px 60px}
+header.top{background:var(--brand);color:#fff}
+header.top .wrap{display:flex;align-items:center;gap:14px;padding:14px 20px}
+.logo{width:36px;height:36px;border-radius:9px;background:#fff;color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:18px}
+header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
+header .sub{font-size:12px;opacity:.8}
+header .spacer{flex:1}
+header .meta{font-size:12px;opacity:.85;text-align:right}
+.btn{border:1px solid var(--line2);background:#fff;color:var(--ink);padding:8px 14px;border-radius:8px}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--brand2);border-color:var(--brand2);color:#fff}
+.btn.primary:hover{background:var(--brand)}
+.btn.primary:disabled{opacity:.55;cursor:not-allowed}
+.btn.ghost{background:transparent;border-color:rgba(255,255,255,.4);color:#fff}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:7px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.card .hd h2{font-size:15px;margin:0;font-weight:600}
+.card .hd .hint{color:var(--ink3);font-size:12px}
+.card .bd{padding:16px 18px}
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(160deg,#0b3d6b 0%,#12579a 55%,#1d6fb8 100%)}
+.login .box{width:min(420px,92vw);background:#fff;border-radius:16px;padding:32px 30px;box-shadow:0 30px 60px -20px rgba(0,0,0,.45)}
+.login h1{font-size:20px;margin:14px 0 4px}
+.login p{color:var(--ink2);margin:0 0 18px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-size:12.5px;color:var(--ink2);font-weight:600}
+.field input{padding:10px 12px;border:1px solid var(--line2);border-radius:8px;font-size:15px}
+.field input:focus{outline:2px solid var(--brand2);outline-offset:1px;border-color:transparent}
+.err{color:var(--crit);font-size:13px;min-height:18px}
+/* summary tiles */
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media(max-width:1100px){.tiles{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.tile .lbl{font-size:12px;color:var(--ink2);font-weight:600;letter-spacing:.2px;text-transform:uppercase}
+.tile .unit{font-size:11px;color:var(--ink3);font-weight:400;text-transform:none;margin-left:4px}
+.tile .rows{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:10px;align-items:baseline}
+.tile .yr{font-size:12px;color:var(--ink3)}
+.tile .val{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.tile .val.prev{font-size:16px;font-weight:600;color:var(--ink2)}
+.tile .crew{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink2);display:flex;justify-content:space-between}
+.tile .crew b{color:var(--ink);font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+/* dropzone */
+.drop{border:2px dashed var(--line2);border-radius:12px;padding:26px;text-align:center;color:var(--ink2);background:var(--surface2);transition:.15s;position:relative;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.drop.over{border-color:var(--brand2);background:var(--brand-soft)}
+.drop img{max-width:100%;max-height:360px;border-radius:8px;border:1px solid var(--line)}
+.drop .kbd{display:inline-block;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:12px;background:#fff;margin:0 2px}
+.drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.actions{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.status{font-size:12.5px;color:var(--ink2)}
+.status.err{color:var(--crit)}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink2);background:var(--surface2);font-weight:600;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.tbl-wrap{overflow-x:auto}
+.entries td input,.entries td select{width:100%;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:#fff}
+.entries td input.bad,.entries td select.bad{border-color:var(--crit);background:var(--crit-soft)}
+.entries td .sm{padding:4px 8px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.pill.neutral{background:var(--brand-soft);color:var(--brand)}
+.pill.muted{background:#eef1f5;color:var(--ink2)}
+/* period cards */
+.period{margin-top:16px}
+.period .hd{flex-wrap:wrap}
+.period .hd .vsl{font-size:16px;font-weight:700}
+.period .hd h2{font-size:15px;margin:0}
+.period .hd .rng{color:var(--ink2);font-size:13px}
+.period .kpis{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.period .kpis .k{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--ink2)}
+.period .kpis .k b{color:var(--ink);font-variant-numeric:tabular-nums;margin-left:4px}
+.sec{padding:12px 18px;border-top:1px solid var(--line)}
+.sec h3{margin:0 0 8px;font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.2px}
+.sec .none{color:var(--ink3);font-size:13px;padding:4px 0}
+details.defs summary{cursor:pointer;color:var(--brand2);font-size:12.5px;user-select:none}
+details.defs ul{margin:6px 0 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+details.defs li{font-size:12.5px;color:var(--ink2);display:flex;gap:8px}
+details.defs li .code{flex:0 0 auto;min-width:34px;text-align:center;font-weight:700;font-size:11px;padding:1px 5px;border-radius:5px;background:#eef1f5;color:var(--ink)}
+details.defs li .code.c17{background:var(--warn-soft);color:var(--warn)}
+details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
+.remark{color:var(--ink2);font-size:12.5px}
+.assess{margin-top:14px}
+.assess .verdict{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.assess .verdict .who{font-weight:700;font-size:15px}
+.assess p.sum{margin:0 0 14px;line-height:1.65;font-size:13.5px}
+.swot{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:760px){.swot{grid-template-columns:1fr}}
+.swot .q{border-radius:10px;padding:12px 14px;border:1px solid var(--line)}
+.swot .q h4{margin:0 0 6px;font-size:12.5px;letter-spacing:.3px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.swot .q ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5}
+.swot .q li{margin:3px 0}
+.swot .s{background:var(--good-soft)} .swot .s h4{color:var(--good)}
+.swot .w{background:var(--crit-soft)} .swot .w h4{color:var(--crit)}
+.swot .o{background:var(--brand-soft)} .swot .o h4{color:var(--brand)}
+.swot .t{background:var(--warn-soft)} .swot .t h4{color:var(--warn)}
+.assess .rec{margin-top:12px;padding:10px 12px;border-left:3px solid var(--brand2);background:var(--surface2);font-size:13px}
+.assess .caveat{margin-top:8px;color:var(--ink3);font-size:11.5px}
+.foot{margin-top:26px;color:var(--ink3);font-size:12px;text-align:center}
+.hidden{display:none!important}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.notice{background:var(--warn-soft);color:var(--warn);border:1px solid #f3d9a8;border-radius:8px;padding:8px 12px;font-size:12.5px;margin-top:10px}
+.seafarer{font-size:13px;color:var(--ink2)}
+.seafarer b{color:var(--ink);font-size:15px}
+@media print{header.top,.card.upload,.actions,.btn{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="login">
+  <form class="box" id="loginForm">
+    <div class="logo">W</div>
+    <h1>WSMK Crew Performance</h1>
+    <p>선원 승선이력 기반 PSC · Unplanned Unavailability · LTIF 조회</p>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="비밀번호 입력" autofocus>
+    </div>
+    <div class="err" id="loginErr"></div>
+    <button class="btn primary" style="width:100%;padding:11px" type="submit" id="loginBtn">로그인</button>
+  </form>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+<header class="top"><div class="wrap">
+  <div class="logo">W</div>
+  <div><h1>WSMK Crew Performance</h1><div class="sub">Sea-service screenshot → PSC · Unplanned Unavailability · LTIF</div></div>
+  <div class="spacer"></div>
+  <div class="meta" id="dataMeta">데이터 로딩 중…</div>
+  <button class="btn ghost sm" id="logoutBtn">로그아웃</button>
+</div></header>
+
+<div class="wrap">
+
+  <!-- Summary tiles -->
+  <section id="summary">
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:15px">Fleet Average per Vessel</h2>
+      <span class="hint" style="color:var(--ink3);font-size:12px" id="fleetHint"></span>
+      <span style="flex:1"></span>
+      <label style="font-size:12px;color:var(--ink2)">선박 수 (당해년도) <input id="fleetNow" type="number" min="1" style="width:64px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px"></label>
+      <label style="font-size:12px;color:var(--ink2)">(전년도) <input id="fleetPrev" type="number" min="1" style="width:64px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px"></label>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="card assess hidden" id="assess">
+      <div class="hd"><h2>Performance Assessment</h2><span class="hint">Best shipping practice 기준 · 승선기간 선박 실적 vs Fleet average</span>
+        <span style="flex:1"></span><span class="status" id="assessStatus"></span><button class="btn sm" id="assessBtn">다시 생성</button></div>
+      <div class="bd" id="assessBody"></div>
+    </div>
+  </section>
+
+  <!-- Upload -->
+  <section class="grid2" style="margin-top:18px">
+    <div class="card upload">
+      <div class="hd"><h2>1. 승선이력 스크린샷</h2><span class="hint">붙여넣기(Ctrl+V) · 드래그 · 파일 선택</span></div>
+      <div class="bd">
+        <div class="drop" id="drop">
+          <input type="file" id="file" accept="image/*" title="">
+          <div id="dropText">
+            <div style="font-size:30px">🖼️</div>
+            <div>스크린샷을 여기에 <b>붙여넣기</b> <span class="kbd">Ctrl</span>+<span class="kbd">V</span> 하거나 드래그하세요</div>
+            <div style="font-size:12px;color:var(--ink3)">선박명 + 승선/하선일이 보이는 선원 경력 표 (PNG/JPG)</div>
+          </div>
+          <img id="preview" class="hidden" alt="screenshot preview">
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="analyzeBtn" disabled>승선기간 분석 (Claude)</button>
+          <button class="btn" id="clearImg">이미지 지우기</button>
+          <span class="status" id="exStatus"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">추출 결과를 확인·수정 후 조회</span>
+        <span style="flex:1"></span><button class="btn sm" id="addRow">+ 행 추가</button></div>
+      <div class="bd">
+        <div class="seafarer" id="seafarer"></div>
+        <div class="tbl-wrap"><table class="entries" id="entries">
+          <thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Sign on</th><th>Sign off</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="entriesEmpty" class="sec none" style="padding:14px 0">스크린샷을 분석하면 승선 기간이 여기에 표시됩니다. 직접 입력도 가능합니다.</div>
+        <div class="actions"><button class="btn primary" id="runBtn" disabled>Performance 조회</button><span class="status" id="runStatus"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section id="results"></section>
+
+  <div class="foot" id="foot"></div>
+</div>
+</div>
+
+<script>
+/* ---------------- state ---------------- */
+let TOKEN = sessionStorage.getItem('wsmk_token') || null;
+let DATA = null;           // index.json
+let IMG = null;            // {b64, type}
+let ENTRIES = [];          // [{vessel, matched, rank, sign_on, sign_off}]
+let SEAFARER = null;
+const $ = s => document.querySelector(s);
+const fmtN = (v, d=1) => (v==null||isNaN(v)) ? '–' : Number(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0});
+const fmtH = h => h>=24 ? `${fmtN(h,1)} h <span class="remark">(${fmtN(h/24,1)} d)</span>` : `${fmtN(h,1)} h`;
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = new Date(); const Y = today.getFullYear(); const PY = Y-1;
+
+/* ---------------- auth ---------------- */
+async function api(path, opts={}) {
+  const headers = Object.assign({'content-type':'application/json'}, opts.headers||{});
+  if (TOKEN) headers['authorization'] = 'Bearer ' + TOKEN;
+  const r = await fetch(path, Object.assign({}, opts, {headers}));
+  if (r.status === 401) { logout(); throw new Error('세션이 만료되었습니다. 다시 로그인하세요.'); }
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+function logout(){ TOKEN=null; sessionStorage.removeItem('wsmk_token'); document.cookie='wsmk_session=; Max-Age=0; Path=/'; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#pw').value=''; }
+$('#logoutBtn').onclick = logout;
+$('#loginForm').onsubmit = async e => {
+  e.preventDefault(); $('#loginErr').textContent=''; $('#loginBtn').disabled=true;
+  try {
+    const j = await api('/api/login',{method:'POST',body:JSON.stringify({password:$('#pw').value})});
+    TOKEN = j.token; sessionStorage.setItem('wsmk_token', TOKEN); await boot();
+  } catch(err){ $('#loginErr').textContent = err.message; }
+  finally { $('#loginBtn').disabled=false; }
+};
+
+async function boot(){
+  try { DATA = await api('/api/data'); }
+  catch(e){ $('#loginErr').textContent = e.message; return; }
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  const g = DATA.generated ? DATA.generated.replace('T',' ').slice(0,16) : '';
+  $('#dataMeta').innerHTML = `PSC ${DATA.psc.length.toLocaleString()} insp. · Unsched. stoppage ${DATA.ua.length} · LTI/LTS ${DATA.lti.length}<br>index ${g}`;
+  $('#foot').textContent = `Sources: ${DATA.sources.psc} (Database) · ${DATA.sources.kpi} (Tech Data / Crew Data1) — indexed ${g}`;
+  $('#fleetNow').value = DATA.fleet_by_year[Y] || DATA.fleet_now.length || 50;
+  $('#fleetPrev').value = DATA.fleet_by_year[PY] || $('#fleetNow').value;
+  $('#fleetHint').textContent = `${Y} vs ${PY} · 한 척당 평균 (LTIF는 총 건수)`;
+  renderTiles();
+  renderEntries();
+}
+$('#fleetNow').oninput = $('#fleetPrev').oninput = () => renderTiles();
+
+/* ---------------- fleet summary ---------------- */
+function yearStats(y){
+  const psc = DATA.psc.filter(p=>p.date.startsWith(y));
+  const ua = DATA.ua.filter(u=>u.date.startsWith(y));
+  const lti = DATA.lti.filter(l=>l.date.startsWith(y) && l.type==='LTIF');
+  return {
+    insp: psc.length, defs: psc.reduce((a,p)=>a+p.def_count,0), det: psc.filter(p=>p.detention).length,
+    clean: psc.filter(p=>p.def_count===0).length,
+    uaN: ua.filter(u=>u.kpi==='Yes').length, uaH: ua.reduce((a,u)=>a+(u.kpi==='Yes'?u.hours:0),0), lti: lti.length,
+  };
+}
+let CREW_TOTALS = null;
+function renderTiles(){
+  const n1 = Math.max(1, +$('#fleetNow').value||1), n0 = Math.max(1, +$('#fleetPrev').value||1);
+  const a = yearStats(String(Y)), b = yearStats(String(PY));
+  const c = CREW_TOTALS;
+  const tiles = [
+    {lbl:'PSC Inspections', unit:'/ vessel', now:a.insp/n1, prev:b.insp/n0, crew:c&&`${c.insp} insp.`},
+    {lbl:'PSC Deficiencies', unit:'/ vessel', now:a.defs/n1, prev:b.defs/n0, crew:c&&`${c.defs} def.`},
+    {lbl:'Deficiency-free rate', unit:'% of inspections', now:a.insp?100*a.clean/a.insp:null, prev:b.insp?100*b.clean/b.insp:null, crew:c&&(c.insp?`${fmtN(100*c.clean/c.insp,0)} %`:'–'), d:0},
+    {lbl:'PSC Detentions', unit:'fleet total', now:a.det, prev:b.det, crew:c&&`${c.det}`, d:0},
+    {lbl:'Unplanned Unavailability', unit:'hours / vessel', now:a.uaH/n1, prev:b.uaH/n0, crew:c&&`${fmtN(c.uaH,1)} h (${c.uaN})`},
+    {lbl:'LTIF', unit:'count (fleet)', now:a.lti, prev:b.lti, crew:c&&`${c.lti}`, d:0},
+  ];
+  $('#tiles').innerHTML = tiles.map(t=>`
+    <div class="tile"><div class="lbl">${t.lbl}<span class="unit">${t.unit}</span></div>
+      <div class="rows"><span class="yr">${Y} YTD</span><span class="val">${fmtN(t.now,t.d??2)}</span>
+      <span class="yr">${PY}</span><span class="val prev">${fmtN(t.prev,t.d??2)}</span></div>
+      ${c?`<div class="crew"><span>이 선원 (승선기간 합계)</span><b>${t.crew}</b></div>`:''}
+    </div>`).join('');
+}
+
+/* ---------------- image handling ---------------- */
+const drop = $('#drop');
+function setImage(file){
+  if (!file || !file.type.startsWith('image/')) return;
+  const img = new Image(); const url = URL.createObjectURL(file);
+  img.onload = () => {
+    // downscale to max 1800px on the long side, JPEG (keeps request < 4MB, faster for the model)
+    const max = 1800; let w = img.width, h = img.height; const s = Math.min(1, max/Math.max(w,h));
+    w = Math.round(w*s); h = Math.round(h*s);
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    const ctx = cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+    const dataUrl = cv.toDataURL('image/jpeg', 0.92);
+    IMG = {b64: dataUrl.split(',')[1], type:'image/jpeg'};
+    $('#preview').src = dataUrl; $('#preview').classList.remove('hidden'); $('#dropText').classList.add('hidden');
+    $('#analyzeBtn').disabled = false; $('#exStatus').textContent = `${w}×${h}px 준비됨`; $('#exStatus').className='status';
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+document.addEventListener('paste', e => {
+  if ($('#app').classList.contains('hidden')) return;
+  for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) { setImage(it.getAsFile()); e.preventDefault(); break; }
+});
+$('#file').onchange = e => setImage(e.target.files[0]);
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop', e => setImage(e.dataTransfer.files[0]));
+$('#clearImg').onclick = () => { IMG=null; $('#preview').classList.add('hidden'); $('#preview').src=''; $('#dropText').classList.remove('hidden'); $('#analyzeBtn').disabled=true; $('#exStatus').textContent=''; $('#file').value=''; };
+
+$('#analyzeBtn').onclick = async () => {
+  if (!IMG) return;
+  const btn = $('#analyzeBtn'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>분석 중…';
+  $('#exStatus').textContent=''; $('#exStatus').className='status';
+  try {
+    const j = await api('/api/extract',{method:'POST',body:JSON.stringify({image:IMG.b64, media_type:IMG.type})});
+    SEAFARER = j.seafarer;
+    ENTRIES = j.entries.map(e=>({vessel:e.vessel, matched:matchVessel(e.vessel), rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}));
+    $('#exStatus').textContent = `${ENTRIES.length}건 추출 · ${j.model} · ${(j.ms/1000).toFixed(1)}s`;
+    renderEntries();
+    if (ENTRIES.length) runPerformance();
+  } catch(err){ $('#exStatus').textContent = err.message; $('#exStatus').className='status err'; }
+  finally { btn.disabled=false; btn.textContent='승선기간 분석 (Claude)'; }
+};
+
+/* ---------------- vessel matching ---------------- */
+function normName(s){ return String(s||'').toUpperCase().replace(/^(M\/V|MV|M\.V\.)\s+/,'').replace(/[^A-Z0-9]+/g,' ').trim(); }
+function bigrams(s){ s=s.replace(/\s+/g,''); const r=[]; for(let i=0;i<s.length-1;i++) r.push(s.slice(i,i+2)); return r; }
+function dice(a,b){ const A=bigrams(a),B=bigrams(b); if(!A.length||!B.length) return 0; const m=new Map(); A.forEach(x=>m.set(x,(m.get(x)||0)+1)); let hit=0; B.forEach(x=>{ if(m.get(x)>0){hit++; m.set(x,m.get(x)-1);} }); return 2*hit/(A.length+B.length); }
+function matchVessel(name){
+  const n = normName(name); if (!n) return '';
+  const list = DATA.vessels;
+  const exact = list.find(v=>normName(v)===n); if (exact) return exact;
+  const nos = n.replace(/\s/g,''); const loose = list.find(v=>normName(v).replace(/\s/g,'')===nos); if (loose) return loose;
+  let best='', bs=0; for (const v of list){ const s=dice(n,normName(v)); if(s>bs){bs=s;best=v;} }
+  return bs>=0.6 ? best : '';
+}
+
+/* ---------------- entries table ---------------- */
+function renderEntries(){
+  const tb = $('#entries tbody');
+  $('#seafarer').innerHTML = SEAFARER ? `Seafarer: <b>${esc(SEAFARER)}</b>` : '';
+  $('#entriesEmpty').classList.toggle('hidden', ENTRIES.length>0);
+  $('#entries').classList.toggle('hidden', ENTRIES.length===0);
+  const opts = v => `<option value="">— 선박 선택 —</option>` + DATA.vessels.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
+  tb.innerHTML = ENTRIES.map((e,i)=>`<tr>
+    <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>
+        ${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
+    <td><input data-i="${i}" data-k="rank" value="${esc(e.rank)}" placeholder="Rank"></td>
+    <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${e.sign_on?'':'bad'}"></td>
+    <td><input data-i="${i}" data-k="sign_off" type="date" value="${esc(e.sign_off)}" placeholder="on board"></td>
+    <td><button class="btn sm" data-del="${i}" title="삭제">✕</button></td></tr>`).join('');
+  tb.querySelectorAll('input,select').forEach(el=>el.onchange = ev => { ENTRIES[+el.dataset.i][el.dataset.k] = el.value; el.classList.toggle('bad', !el.value && el.dataset.k!=='sign_off' && el.dataset.k!=='rank'); });
+  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ ENTRIES.splice(+b.dataset.del,1); renderEntries(); });
+  $('#runBtn').disabled = ENTRIES.length===0;
+}
+$('#addRow').onclick = () => { ENTRIES.push({vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}); renderEntries(); };
+$('#runBtn').onclick = () => runPerformance();
+
+/* ---------------- performance ---------------- */
+function inRange(d, a, b){ return d >= a && d <= b; }
+function runPerformance(){
+  const valid = ENTRIES.filter(e=>e.matched && e.sign_on);
+  if (!valid.length){ $('#runStatus').textContent='선박과 승선일을 입력하세요.'; $('#runStatus').className='status err'; return; }
+  $('#runStatus').textContent=''; $('#runStatus').className='status';
+  const todayISO = today.toISOString().slice(0,10);
+  const tot = {insp:0,defs:0,det:0,clean:0,uaN:0,uaH:0,lti:0};
+  const cards = valid.slice().sort((a,b)=>a.sign_on.localeCompare(b.sign_on)).map(e=>{
+    const a = e.sign_on, b = e.sign_off || todayISO;
+    const days = Math.round((new Date(b)-new Date(a))/86400000)+1;
+    const psc = DATA.psc.filter(p=>p.vessel===e.matched && inRange(p.date,a,b));
+    const ua  = DATA.ua.filter(u=>u.vessel===e.matched && inRange(u.date,a,b));
+    const lti = DATA.lti.filter(l=>l.vessel===e.matched && inRange(l.date,a,b));
+    const s = {insp:psc.length, defs:psc.reduce((x,p)=>x+p.def_count,0), det:psc.filter(p=>p.detention).length, clean:psc.filter(p=>p.def_count===0).length, uaN:ua.filter(u=>u.kpi==='Yes').length, uaH:ua.reduce((x,u)=>x+(u.kpi==='Yes'?u.hours:0),0), lti:lti.filter(l=>l.type==='LTIF').length};
+    Object.keys(tot).forEach(k=>tot[k]+=s[k]);
+    return {e,a,b,days,psc,ua,lti,s};
+  });
+  CREW_TOTALS = tot; renderTiles();
+
+  DATA.psc.forEach(p=>{ if(p.code30==null) p.code30 = p.deficiencies.filter(d=>/\b30\b/.test(d.code)).length; });
+  const rows = [];
+  cards.forEach(c=>{ c.psc.forEach(p=>rows.push({c,p})); });
+  const uaRows=[], ltiRows=[];
+  cards.forEach(c=>{ c.ua.forEach(u=>uaRows.push({c,u})); c.lti.forEach(l=>ltiRows.push({c,l})); });
+  const vcell = c => `<td style="min-width:170px"><b>${esc(c.e.matched)}</b><div class="remark">${c.a} ~ ${c.e.sign_off||'on board'}${c.e.rank?` · ${esc(c.e.rank)}`:''}</div></td>`;
+  const periodsHtml = `<div class="card period"><div class="hd"><h2>승선 기간 요약 (${cards.length})</h2></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Vessel</th><th>Period</th><th>Rank</th><th class="num">Days</th><th class="num">PSC</th><th class="num">Def.</th><th class="num">무결함 (%)</th><th class="num">Detention</th><th class="num">Events</th><th class="num">Unavail. (h)</th><th class="num">LTIF</th></tr></thead>
+    <tbody>${cards.map(c=>`<tr><td><b>${esc(c.e.matched)}</b></td><td class="num">${c.a} ~ ${c.e.sign_off||'<i>on board</i>'}</td><td>${esc(c.e.rank)}</td><td class="num">${c.days}</td><td class="num">${c.s.insp}</td><td class="num">${c.s.defs}</td><td class="num">${c.s.clean}${c.s.insp?` <span class="remark">(${fmtN(100*c.s.clean/c.s.insp,0)}%)</span>`:''}</td><td class="num">${c.s.det||''}</td><td class="num">${c.s.uaN}</td><td class="num">${fmtN(c.s.uaH,1)}</td><td class="num">${c.s.lti||''}</td></tr>`).join('')}
+    <tr style="background:var(--surface2);font-weight:600"><td>합계</td><td></td><td></td><td class="num">${cards.reduce((x,c)=>x+c.days,0)}</td><td class="num">${tot.insp}</td><td class="num">${tot.defs}</td><td class="num">${tot.clean}${tot.insp?` <span class="remark">(${fmtN(100*tot.clean/tot.insp,0)}%)</span>`:''}</td><td class="num">${tot.det}</td><td class="num">${tot.uaN}</td><td class="num">${fmtN(tot.uaH,1)}</td><td class="num">${tot.lti}</td></tr></tbody></table></div></div>`;
+
+  const pscHtml = `<div class="card period"><div class="hd"><h2>1. PSC Inspections</h2>
+      <div class="kpis"><span class="k">검사<b>${tot.insp}</b></span><span class="k">결함<b>${tot.defs}</b></span><span class="k">무결함<b>${tot.clean}${tot.insp?` (${fmtN(100*tot.clean/tot.insp,0)}%)`:''}</b></span><span class="k">Detention<b>${tot.det}</b></span></div></div>
+    ${rows.length?`<div class="tbl-wrap"><table>
+      <thead><tr><th>Vessel / Period</th><th>Date</th><th>Port / Country</th><th>MOU</th><th class="num">Def.</th><th class="num">Code 17</th><th class="num">Code 30</th><th>Result</th><th style="width:34%">Deficiencies</th></tr></thead>
+      <tbody>${rows.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>`<tr>
+        ${vcell(c)}<td class="num">${p.date}</td><td>${esc(p.port)}${p.country?`, ${esc(p.country)}`:''}</td><td>${esc(p.mou)}</td>
+        <td class="num">${p.def_count}</td><td class="num">${p.code17||''}</td><td class="num">${p.code30||''}</td>
+        <td>${p.detention?'<span class="pill crit">⛔ Detention</span>':p.def_count===0?'<span class="pill good">✓ No deficiency</span>':'<span class="pill warn">Deficiency</span>'}</td>
+        <td>${p.deficiencies.length?`<details class="defs"><summary>${p.deficiencies.length}건 보기</summary><ul>${p.deficiencies.map(d=>`<li><span class="code ${/\b30\b/.test(d.code)?'c30':/\b17\b/.test(d.code)?'c17':''}">${esc(d.code)||'–'}</span><span>${esc(d.desc)}${d.item?` <span class="remark">[${esc(d.item)}]</span>`:''}</span></li>`).join('')}</ul></details>`:''}</td>
+      </tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 PSC 검사 없음</div>'}</div>`;
+
+  const uaHtml = `<div class="card period"><div class="hd"><h2>2. Unplanned Unavailability — Unscheduled stoppage</h2>
+      <div class="kpis"><span class="k">건수<b>${tot.uaN}</b></span><span class="k">합계<b>${fmtN(tot.uaH,1)} h</b></span><span class="k">≥ 24h<b>${uaRows.filter(x=>x.u.hours>=24).length}</b></span></div></div>
+    ${uaRows.length?`<div class="tbl-wrap"><table>
+      <thead><tr><th>Vessel / Period</th><th>Date</th><th class="num">Hours</th><th>Remark (≥ 24h 상세)</th><th>Docmap</th></tr></thead>
+      <tbody>${uaRows.sort((x,y)=>x.u.date.localeCompare(y.u.date)).map(({c,u})=>`<tr>${vcell(c)}<td class="num">${u.date}</td>
+        <td class="num">${u.hours>=24?`<span class="pill warn">⚠ ${fmtH(u.hours)}</span>`:fmtH(u.hours)}</td>
+        <td>${u.hours>=24?esc(u.remark):`<span class="remark">${esc(u.remark)}</span>`}</td>
+        <td class="remark">${esc(u.docmap)}${u.kpi!=='Yes'?` <span class="pill muted">${esc(u.kpi||'KPI ?')}</span>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 Unscheduled stoppage 없음</div>'}</div>`;
+
+  const ltiHtml = `<div class="card period"><div class="hd"><h2>3. LTIF / LTSF</h2><span class="hint">WSMK KPI → Crew Data1</span>
+      <div class="kpis"><span class="k">LTIF<b>${tot.lti}</b></span><span class="k">LTSF<b>${ltiRows.filter(x=>x.l.type==='LTSF').length}</b></span></div></div>
+    ${ltiRows.length?`<div class="tbl-wrap"><table>
+      <thead><tr><th>Vessel / Period</th><th>Date</th><th>Type</th><th>Rank</th><th>Description</th></tr></thead>
+      <tbody>${ltiRows.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>`<tr>${vcell(c)}<td class="num">${l.date}</td><td><span class="pill ${l.type==='LTIF'?'crit':'neutral'}">${esc(l.type)}</span></td><td>${esc(l.rank)}</td><td>${esc(l.desc)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 LTI/LTS 없음</div>'}</div>`;
+
+  $('#results').innerHTML = periodsHtml + pscHtml + uaHtml + ltiHtml + (cards.some(c=>c.a < '2014-01-01')?'<div class="notice">PSC 데이터는 2014년, KPI 데이터는 2016년부터 색인되어 있어 그 이전 승선기간은 실적이 표시되지 않습니다.</div>':'');
+  LAST_CARDS = cards; LAST_TOT = tot;
+  runAssessment();
+  $('#results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------------- AI assessment (summary + SWOT) ---------------- */
+let LAST_CARDS=null, LAST_TOT=null;
+$('#assessBtn').onclick = () => runAssessment();
+async function runAssessment(){
+  if (!LAST_CARDS) return;
+  const box = $('#assess'); box.classList.remove('hidden');
+  $('#assessStatus').textContent=''; $('#assessStatus').className='status';
+  $('#assessBody').innerHTML = '<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Claude가 실적을 분석하고 있습니다…</div>';
+  const n1 = Math.max(1, +$('#fleetNow').value||1), n0 = Math.max(1, +$('#fleetPrev').value||1);
+  const fa = yearStats(String(Y)), fb = yearStats(String(PY));
+  const per = n => ({insp_per_vessel:+(n.insp/n._n).toFixed(2), def_per_vessel:+(n.defs/n._n).toFixed(2), deficiency_free_rate_pct: n.insp?Math.round(100*n.clean/n.insp):null, detentions_total:n.det, unsched_stoppage_hours_per_vessel:+(n.uaH/n._n).toFixed(1), unsched_stoppage_events_per_vessel:+(n.uaN/n._n).toFixed(2), ltif_count_total:n.lti});
+  fa._n=n1; fb._n=n0;
+  const payload = {
+    seafarer: SEAFARER || null,
+    today: today.toISOString().slice(0,10),
+    fleet_average_per_vessel: { [Y+' YTD']: per(fa), [String(PY)]: per(fb) },
+    totals: {...LAST_TOT, days_on_board: LAST_CARDS.reduce((x,c)=>x+c.days,0)},
+    periods: LAST_CARDS.map(c=>({
+      vessel:c.e.matched, rank:c.e.rank||null, sign_on:c.a, sign_off:c.e.sign_off||'on board', days:c.days,
+      stats:c.s,
+      psc:c.psc.map(p=>({date:p.date, port:p.port, country:p.country, mou:p.mou, deficiencies:p.def_count, code17:p.code17, code30:p.code30, detention:p.detention, items:p.deficiencies.slice(0,12).map(d=>`[${d.code}] ${d.desc.slice(0,120)}`)})),
+      unscheduled_stoppage:c.ua.map(u=>({date:u.date, hours:u.hours, remark:u.remark, kpi:u.kpi})),
+      lti:c.lti.map(l=>({date:l.date, type:l.type, rank:l.rank, desc:l.desc})),
+    })),
+  };
+  try {
+    const j = await api('/api/assess',{method:'POST',body:JSON.stringify(payload)});
+    const cls = /above/i.test(j.rating)?'good':/below/i.test(j.rating)?'crit':'neutral';
+    const li = a => (a||[]).map(x=>`<li>${esc(x)}</li>`).join('') || '<li class="remark">–</li>';
+    $('#assessBody').innerHTML = `
+      <div class="verdict"><span class="who">${esc(SEAFARER||'조회 선원')}</span><span class="pill ${cls}">${esc(j.rating||'')}</span>
+        <span class="remark">${LAST_CARDS.length}개 승선기간 · ${payload.totals.days_on_board}일 · PSC ${LAST_TOT.insp} · Def. ${LAST_TOT.defs} · Detention ${LAST_TOT.det} · Unavail. ${fmtN(LAST_TOT.uaH,1)} h (${LAST_TOT.uaN}) · LTIF ${LAST_TOT.lti}</span></div>
+      <p class="sum">${esc(j.summary||'')}</p>
+      <div class="swot">
+        <div class="q s"><h4>💪 Strengths</h4><ul>${li(j.swot?.strengths)}</ul></div>
+        <div class="q w"><h4>⚠️ Weaknesses</h4><ul>${li(j.swot?.weaknesses)}</ul></div>
+        <div class="q o"><h4>🎯 Opportunities</h4><ul>${li(j.swot?.opportunities)}</ul></div>
+        <div class="q t"><h4>🌊 Threats</h4><ul>${li(j.swot?.threats)}</ul></div>
+      </div>
+      ${j.recommendation?`<div class="rec"><b>Recommendation</b> — ${esc(j.recommendation)}</div>`:''}
+      <div class="caveat">※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude가 생성한 참고용 평가입니다. 개인 귀책 판단 시에는 사고보고서·감사 결과 등 원자료를 확인하십시오.</div>`;
+    $('#assessStatus').textContent = `${j.model} · ${(j.ms/1000).toFixed(1)}s`;
+  } catch(err){
+    $('#assessBody').innerHTML=''; $('#assessStatus').textContent = err.message; $('#assessStatus').className='status err';
+  }
+}
+
+/* ---------------- start ---------------- */
+if (TOKEN) boot();
+</script>
+</body>
+</html>
