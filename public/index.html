@@ -208,6 +208,8 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .ssmm .why{font-size:13px;color:var(--ink2);margin:2px 0 4px}
 .ssmm ul{margin:0;padding-left:18px;font-size:13px}
 .ssmm.eng{border-left-color:var(--warn)}
+.ssmm.engrec{border-left-color:var(--good)}
+.ssmm.engrec h4{color:#1a5c2a}
 .ssmm.eng h4{color:#7c4a00}
 .engt{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .engt th{background:var(--surface2);text-align:left;padding:6px 8px;font-size:11.5px;color:var(--ink2);border-bottom:1px solid var(--line)}
@@ -692,7 +694,15 @@ async function runEng(g){
   } catch(err){ g.engErr=err.message; }
   g.engBusy=false; renderEng(g);
 }
+function renderEngRec(g){
+  const el=$(`#engrec-${g.id}`); if(!el) return;
+  const r=g.eng&&g.eng.recommendation; if(g.engBusy||g.engErr||!r||!(r.headline||(r.guidance||[]).length)){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="ssmm engrec"><h4>🧭 Engineer Recommendation <span class="remark">Unplanned Unavailability · PSC 기관 관련 결함 기반 차기 승선 가이드 · ${esc(rankOf(g))}</span></h4>
+    ${r.headline?`<div class="rec" style="margin:0 0 8px"><b>핵심</b> — ${esc(r.headline)}</div>`:''}
+    <ol class="sf">${(r.guidance||[]).map(x=>`<li><div class="sh"><b>${esc(x.topic)}</b>${x.ref?`<span class="cl">↳ ${esc(x.ref)}</span>`:''}</div><div class="why">${esc(x.guide)}</div></li>`).join('')}</ol></div>`;
+}
 function renderEng(g){
+  renderEngRec(g);
   const el=$(`#eng-${g.id}`); if(!el) return;
   const hd='<h4>🔧 기관부 PMS·기기 보완 점검 <span class="remark">Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준</span></h4>';
   if (g.engBusy){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Best shipping practice를 기준으로 보완 점검이 필요한 PMS·기기를 검토하고 있습니다…</div></div>`; return; }
@@ -736,6 +746,7 @@ function renderAssessBody(g){
     </div>
     ${j.recommendation?`<div class="rec"><b>Recommendation</b> — ${esc(j.recommendation)}</div>`:''}
     <div id="ssmm-${g.id}"></div>
+    <div id="engrec-${g.id}"></div>
     <div id="eng-${g.id}"></div>
     <div class="caveat">※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude가 생성한 참고용 평가입니다. 개인 귀책 판단 시에는 사고보고서·감사 결과 등 원자료를 확인하십시오.</div>`;
   st.textContent = `${j.model} · ${(j.ms/1000).toFixed(1)}s`;
@@ -788,6 +799,12 @@ function reportBody(g, first){
       b += para('SSMM 이행 강조 사항 (SWOT → SSMM Rev 47 조항)',{b:true,size:11,color:'0B3D6B',before:200,after:60});
       g.ssmm.focus.forEach((f,i)=>{ b += para([{t:`${i+1}. SSMM ${f.section} ${f.title}`,b:true,size:10.5},{t:(f.clauses||[]).length?`  (${f.clauses.join(', ')})`:'',size:9.5,color:'64748B'}],{before:80,after:30}); b += para(f.why||'',{size:10}); (f.actions||[]).forEach(x=>b+=bullet(x)); });
       if (g.ssmm.overall) b += para([{t:'종합: ',b:true,size:10},{t:g.ssmm.overall,size:10}],{before:80});
+    }
+    if (g.eng && g.eng.recommendation && (g.eng.recommendation.headline||(g.eng.recommendation.guidance||[]).length)){
+      const r=g.eng.recommendation;
+      b += para(`Engineer Recommendation (Unplanned Unavailability · PSC 기관 관련 결함 기반 · ${rankOf(g)})`,{b:true,size:11,color:'0B3D6B',before:200,after:60});
+      if (r.headline) b += para([{t:'핵심: ',b:true,size:10},{t:r.headline,size:10}],{after:40});
+      (r.guidance||[]).forEach((x,i)=>{ b += para([{t:`${i+1}. ${x.topic}`,b:true,size:10.5},{t:x.ref?`  (↳ ${x.ref})`:'',size:9.5,color:'64748B'}],{before:80,after:30}); b += para(x.guide||'',{size:10}); });
     }
     if (g.eng && (g.eng.items||[]).length){
       b += para(`기관부 PMS·기기 보완 점검 (Best shipping practice 기준 · ${rankOf(g)})`,{b:true,size:11,color:'0B3D6B',before:200,after:60});
