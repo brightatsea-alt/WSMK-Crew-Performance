@@ -15,7 +15,7 @@ Rules:
 - If a row shows only one date or the sign-off is blank / "present" / "~", set sign_off to null.
 - Keep vessel names exactly as written (do not translate). Ignore leading "M/V", "MV".
 - DATE rule: each row's period is that row's own Start Date → End Date columns (also labelled Sign On / Sign Off, From / To, Embark / Disembark). For an ON BOARD row this is exactly the time on board. If the table shows both a contract period and a Start/End Date per status row, use the per-row Start/End Date. Never extend an ON BOARD row with the dates of a following leave row, and never merge rows.
-- ON BOARD rule: only rows whose status/type is "ON BOARD" (on board a vessel) are sea service → "on_board": true. Every other row — "EARNED LEAVE UNPAID", "EARNED LEAVE", "LEAVE", "VACATION", "STANDBY", "TRAINING", "MEDICAL", etc. — is NOT sea service → "on_board": false, but still output it with its dates and "status" as written (set "vessel" to the vessel name if one is shown, otherwise to the status text). If the table has no status column, every vessel row is on_board: true unless the vessel/remark text itself says leave.
+- ON BOARD rule: the status/type column may be labelled Status, Type, Activity, etc. Any row whose status/type text CONTAINS "On Board" / "Onboard" in any form — e.g. "ON BOARD", "On Board (o.o.s)", "On board - OOS", "Onboard (Promotion)" — is sea service → "on_board": true (copy the full text into "status"). Every other row — "EARNED LEAVE UNPAID", "EARNED LEAVE", "LEAVE", "VACATION", "STANDBY", "TRAINING", "MEDICAL", etc. — is NOT sea service → "on_board": false, but still output it with its dates and "status" as written (set "vessel" to the vessel name if one is shown, otherwise to the status text). If the table has no status column, every vessel row is on_board: true unless the vessel/remark text itself says leave.
 - Never skip a leave/off row: it is needed to show the excluded period.
 - Sort by sign_on ascending.
 Known fleet vessel names (use to correct OCR mistakes when the match is obvious): ${data.vessels.join(", ")}`;
@@ -76,7 +76,7 @@ module.exports = async (req, res) => {
     sign_on: e.sign_on,
     sign_off: e.sign_off || null,
     status: e.status ? String(e.status).trim() : null,
-    on_board: !(e.on_board === false || e.leave === true || (e.status && !/^\s*(ON\s*-?\s*BOARD|ONBOARD)\s*$/i.test(String(e.status))) || /\b(EARNED\s+LEAVE|LEAVE|UNPAID|VACATION|HOLIDAY)\b/i.test(String(e.vessel || "") + " " + String(e.rank || ""))),
+    on_board: /(ON\s*-?\s*BOARD|ONBOARD)/i.test(String(e.status || "")) || !(e.on_board === false || e.leave === true || (e.status && !/(ON\s*-?\s*BOARD|ONBOARD)/i.test(String(e.status))) || /\b(EARNED\s+LEAVE|LEAVE|UNPAID|VACATION|HOLIDAY)\b/i.test(String(e.vessel || "") + " " + String(e.rank || ""))),
   }));
   res.status(200).json({
     seafarer: parsed.seafarer || null,
