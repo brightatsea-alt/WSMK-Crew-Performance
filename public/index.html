@@ -267,7 +267,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
     </div>
 
     <div class="card">
-      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">선원별 추출 결과를 확인·수정 후 조회</span>
+      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">선원별 추출 결과를 확인·수정 후 조회 · 승선 기간 = ON BOARD 행의 Start Date ~ End Date만 적용</span>
         <span style="flex:1"></span><button class="btn sm" id="addGroup">+ 선원 추가</button></div>
       <div class="bd">
         <div id="groups"></div>
@@ -493,7 +493,7 @@ function renderGroups(){
       <input class="gn" data-gk="name" value="${esc(g.name)}" placeholder="선원 이름"><input class="gr" data-gk="rank" value="${esc(g.rank)}" placeholder="직급">
       <span class="remark">${g.entries.filter(e=>!isLeave(e)).length}개 승선기간${leaveCount(g)?` · <span style="color:var(--warn)">미승선 ${leaveCount(g)}건 (${leaveDays(g)}일, 분석 제외 — ON BOARD 행만 반영)</span>`:''}</span><span style="flex:1"></span>
       <button class="btn sm" data-add="${g.id}">+ 행</button><button class="btn sm" data-del="${g.id}" title="이 선원 제거">✕</button></div>
-    <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Sign on</th><th>Sign off</th><th></th></tr></thead>
+    <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Start Date (sign on)</th><th>End Date (sign off)</th><th></th></tr></thead>
     <tbody>${g.entries.map((e,i)=>isLeave(e)?`<tr class="leave" style="background:var(--warn-soft);color:var(--ink2)">
       <td><span class="pill warn">${/LEAVE|VACATION|HOLIDAY/i.test(e.reason||e.vessel)?'🏖 휴가':'⏸ 미승선'}</span> <b>${esc(e.reason||e.vessel||'NOT ON BOARD')}</b>${e.vessel && e.vessel!==e.reason?`<div class="remark">${esc(e.vessel)}</div>`:''}<div class="remark" style="margin-top:3px">status가 ON BOARD가 아니므로 승선기간·성과 분석에서 제외됩니다</div></td>
       <td>${esc(e.rank||'')}</td><td class="num">${esc(e.sign_on)}</td><td class="num">${esc(e.sign_off||'')}</td>
