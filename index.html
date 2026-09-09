@@ -107,6 +107,16 @@ details.defs li .code{flex:0 0 auto;min-width:34px;text-align:center;font-weight
 details.defs li .code.c17{background:var(--warn-soft);color:var(--warn)}
 details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .remark{color:var(--ink2);font-size:12.5px}
+.moulist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.mouitem{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface2)}
+.mouitem .mn{font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.2px}
+.mouitem .mv{display:flex;align-items:baseline;gap:8px;margin:4px 0}
+.mouitem .mv b{font-size:20px;font-variant-numeric:tabular-nums}
+.mouitem .mb{height:6px;border-radius:3px;background:#e2e8f0;overflow:hidden;margin:4px 0 6px}
+.mouitem .mb i{display:block;height:100%;border-radius:3px}
+.mouitem .g{color:var(--good)} .mouitem .mb i.g{background:var(--good)}
+.mouitem .w{color:var(--warn)} .mouitem .mb i.w{background:var(--warn)}
+.mouitem .c{color:var(--crit)} .mouitem .mb i.c{background:var(--crit)}
 .assess{margin-top:14px}
 .assess .verdict{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .assess .verdict .who{font-weight:700;font-size:15px}
@@ -415,7 +425,8 @@ function runPerformance(){
 
   const pscHtml = `<div class="card period"><div class="hd"><h2>1. PSC Inspections</h2>
       <div class="kpis"><span class="k">검사<b>${tot.insp}</b></span><span class="k">결함<b>${tot.defs}</b></span><span class="k">무결함<b>${tot.clean}${tot.insp?` (${fmtN(100*tot.clean/tot.insp,0)}%)`:''}</b></span><span class="k">Detention<b>${tot.det}</b></span></div></div>
-    ${rows.length?`<div class="tbl-wrap"><table>
+    ${rows.length?`<div class="sec mou"><h3>MOU별 Flawless rate</h3><div class="moulist">${(()=>{const m={};rows.forEach(({p})=>{const k=p.mou||'Unknown';m[k]=m[k]||{n:0,c:0,d:0,det:0};m[k].n++;m[k].d+=p.def_count;if(p.def_count===0)m[k].c++;if(p.detention)m[k].det++;});return Object.entries(m).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>{const pct=Math.round(100*v.c/v.n);return `<div class="mouitem"><div class="mn">${esc(k)}</div><div class="mv"><b class="${pct>=80?'g':pct>=60?'w':'c'}">${pct}%</b><span class="remark">flawless ${v.c}/${v.n}</span></div><div class="mb"><i style="width:${pct}%" class="${pct>=80?'g':pct>=60?'w':'c'}"></i></div><div class="remark">결함 ${v.d}${v.det?` · <span style="color:var(--crit)">Detention ${v.det}</span>`:''}</div></div>`;}).join('');})()}</div></div>
+    <div class="tbl-wrap"><table>
       <thead><tr><th>Vessel / Period</th><th>Date</th><th>Port / Country</th><th>MOU</th><th class="num">Def.</th><th class="num">Code 17</th><th class="num">Code 30</th><th>Result</th><th style="width:34%">Deficiencies</th></tr></thead>
       <tbody>${rows.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>`<tr>
         ${vcell(c)}<td class="num">${p.date}</td><td>${esc(p.port)}${p.country?`, ${esc(p.country)}`:''}</td><td>${esc(p.mou)}</td>
@@ -462,6 +473,7 @@ async function runAssessment(){
     today: today.toISOString().slice(0,10),
     fleet_average_per_vessel: { [Y+' YTD']: per(fa), [String(PY)]: per(fb) },
     totals: {...LAST_TOT, days_on_board: LAST_CARDS.reduce((x,c)=>x+c.days,0)},
+    psc_by_mou: (()=>{const m={};LAST_CARDS.forEach(c=>c.psc.forEach(p=>{const k=p.mou||'Unknown';m[k]=m[k]||{inspections:0,deficiency_free:0,deficiencies:0,detentions:0};m[k].inspections++;m[k].deficiencies+=p.def_count;if(p.def_count===0)m[k].deficiency_free++;if(p.detention)m[k].detentions++;}));Object.values(m).forEach(v=>v.flawless_rate_pct=Math.round(100*v.deficiency_free/v.inspections));return m;})(),
     periods: LAST_CARDS.map(c=>({
       vessel:c.e.matched, rank:c.e.rank||null, sign_on:c.a, sign_off:c.e.sign_off||'on board', days:c.days,
       stats:c.s,
