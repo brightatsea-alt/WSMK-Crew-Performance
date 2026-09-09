@@ -188,7 +188,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 <!-- ============ APP ============ -->
 <div id="app" class="hidden">
 <header class="top"><div class="wrap">
-  <a class="brand" href="/" title="새로고침 (처음 화면으로)" onclick="location.reload(); return false;">
+  <a class="brand" href="/" title="처음 화면으로 (새로고침)" onclick="resetApp(); return false;">
   <div class="logo">W</div>
   <div><h1>WSMK Crew Performance</h1><div class="sub">Sea-service screenshot → PSC · Unplanned Unavailability · LTIF</div></div>
   </a>
@@ -660,6 +660,13 @@ function exportDocx(){
   const blob = zipStore(files);
   const nm = (SEAFARER||'crew').replace(/[^\w가-힣]+/g,'_');
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`WSMK_Crew_Performance_${nm}_${today.toISOString().slice(0,10)}.docx`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
+
+/* ---------------- header: reset to initial screen ---------------- */
+function resetApp(){
+  try { IMG=null; ENTRIES=[]; SEAFARER=null; SEAFARER_RANK=null; LAST_CARDS=null; LAST_TOT=null; LAST_ASSESS=null; CREW_TOTALS=null; } catch(e){}
+  // hard reload with cache-busting so the newest deployed version is always loaded
+  location.replace(location.pathname + '?r=' + Date.now());
 }
 
 /* ---------------- start ---------------- */
