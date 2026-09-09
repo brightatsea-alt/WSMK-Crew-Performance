@@ -397,7 +397,7 @@ async function addPdfFile(file){
   for (let i=1;i<=pdf.numPages;i++){
     const page = await pdf.getPage(i); const vp0 = page.getViewport({scale:1}); const scale = Math.min(2.2, 1800/Math.max(vp0.width,vp0.height)); const vp = page.getViewport({scale});
     const cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height); const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
-    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    await page.render({canvasContext:ctx, viewport:vp, intent:'print'}).promise; // 'print' → no requestAnimationFrame (탭이 백그라운드여도 렌더링됨)
     const img=new Image(); await new Promise(res=>{ img.onload=res; img.src=cv.toDataURL('image/jpeg',0.92); });
     const d=downscale(img); QUEUE.push({id:uid(), b64:d.b64, type:'image/jpeg', thumb:d.thumb, label:`${file.name} p.${i}`, status:'ready'});
   }
