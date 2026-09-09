@@ -446,14 +446,29 @@ $('#analyzeBtn').onclick = async () => {
   if (REPORTS.some(r=>r.entries.length)) runAll();
 };
 function mergeIntoGroups(q){
-  const entries = (q.entries||[]).map(e=>({vessel:e.vessel, matched:matchVessel(e.vessel), rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}));
+  const entries = (q.entries||[]).map(e=>{ const lv=isLeave(e); return {vessel:e.vessel, matched: lv?'':matchVessel(e.vessel), leave:lv, status:e.status||'', reason: lv?offReason(e):'', rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}; });
   const key = normPerson(q.seafarer);
   let g = key ? REPORTS.find(r=>normPerson(r.name)===key) : null;
   if (!g){ g={id:uid(), name:q.seafarer||`선원 ${REPORTS.length+1}`, rank:q.rank||'', entries:[], cards:null}; REPORTS.push(g); }
   if (!g.rank && q.rank) g.rank=q.rank;
-  entries.forEach(e=>{ if(!g.entries.some(x=>x.matched===e.matched && x.sign_on===e.sign_on)) g.entries.push(e); });
+  entries.forEach(e=>{ if(!g.entries.some(x=>x.sign_on===e.sign_on && (e.leave ? x.leave : x.matched===e.matched))) g.entries.push(e); });
   g.entries.sort((a,b)=>a.sign_on.localeCompare(b.sign_on));
 }
+
+/* ---------------- on-board 판정: status가 ON BOARD 인 행만 승선기간. EARNED LEAVE UNPAID 등 휴가·미승선 행은 제외 ---------------- */
+const LEAVE_RE = /\b(EARNED\s+LEAVE|LEAVE|UNPAID|VACATION|HOLIDAY|SHORE\s+STAY|STAND\s*-?\s*BY|TRAINING|MEDICAL|SICK)\b/i;
+const ONBOARD_RE = /^\s*(ON\s*-?\s*BOARD|ONBOARD|ON\s+BD|SEA\s+SERVICE|SIGN(ED)?\s*ON)\s*$/i;
+function offReason(e){
+  if (!e) return '';
+  if (e.on_board===false || e.leave===true) return e.status || e.vessel || 'NOT ON BOARD';
+  const st=String(e.status||'').trim();
+  if (st && !ONBOARD_RE.test(st)) return st;                       // status 열이 있는데 ON BOARD 가 아니면 제외
+  if (LEAVE_RE.test(String(e.vessel||'')) || LEAVE_RE.test(String(e.rank||''))) return e.vessel || e.rank; // 선박명 자리에 휴가 문구
+  return '';
+}
+function isLeave(e){ return !!offReason(e); }
+function leaveDays(g){ return (g.entries||[]).filter(e=>isLeave(e)&&e.sign_on).reduce((n,e)=>n+Math.max(0,Math.round((new Date(e.sign_off||today.toISOString().slice(0,10))-new Date(e.sign_on))/86400000)+1),0); }
+function leaveCount(g){ return (g.entries||[]).filter(isLeave).length; }
 
 /* ---------------- vessel matching ---------------- */
 function normName(s){ return String(s||'').toUpperCase().replace(/^(M\/V|MV|M\.V\.)\s+/,'').replace(/[^A-Z0-9]+/g,' ').trim(); }
@@ -476,10 +491,13 @@ function renderGroups(){
   box.innerHTML = REPORTS.map((g,gi)=>`<div class="group" data-g="${g.id}">
     <div class="gh"><span class="idx" style="background:var(--brand);color:#fff;font-weight:700;border-radius:6px;padding:1px 8px;font-size:12px">${gi+1}</span>
       <input class="gn" data-gk="name" value="${esc(g.name)}" placeholder="선원 이름"><input class="gr" data-gk="rank" value="${esc(g.rank)}" placeholder="직급">
-      <span class="remark">${g.entries.length}개 승선기간</span><span style="flex:1"></span>
+      <span class="remark">${g.entries.filter(e=>!isLeave(e)).length}개 승선기간${leaveCount(g)?` · <span style="color:var(--warn)">미승선 ${leaveCount(g)}건 (${leaveDays(g)}일, 분석 제외 — ON BOARD 행만 반영)</span>`:''}</span><span style="flex:1"></span>
       <button class="btn sm" data-add="${g.id}">+ 행</button><button class="btn sm" data-del="${g.id}" title="이 선원 제거">✕</button></div>
     <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Sign on</th><th>Sign off</th><th></th></tr></thead>
-    <tbody>${g.entries.map((e,i)=>`<tr>
+    <tbody>${g.entries.map((e,i)=>isLeave(e)?`<tr class="leave" style="background:var(--warn-soft);color:var(--ink2)">
+      <td><span class="pill warn">${/LEAVE|VACATION|HOLIDAY/i.test(e.reason||e.vessel)?'🏖 휴가':'⏸ 미승선'}</span> <b>${esc(e.reason||e.vessel||'NOT ON BOARD')}</b>${e.vessel && e.vessel!==e.reason?`<div class="remark">${esc(e.vessel)}</div>`:''}<div class="remark" style="margin-top:3px">status가 ON BOARD가 아니므로 승선기간·성과 분석에서 제외됩니다</div></td>
+      <td>${esc(e.rank||'')}</td><td class="num">${esc(e.sign_on)}</td><td class="num">${esc(e.sign_off||'')}</td>
+      <td><button class="btn sm" data-rm="${i}" title="삭제">✕</button></td></tr>`:`<tr>
       <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
       <td><input data-i="${i}" data-k="rank" value="${esc(e.rank)}" placeholder="Rank"></td>
       <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${e.sign_on?'':'bad'}"></td>
@@ -493,7 +511,7 @@ function renderGroups(){
     el.querySelector('[data-add]').onclick=()=>{ g.entries.push({vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}); renderGroups(); };
     el.querySelector('[data-del]').onclick=()=>{ REPORTS=REPORTS.filter(r=>r!==g); renderGroups(); renderResults(); };
   });
-  $('#runBtn').disabled = !REPORTS.some(g=>g.entries.length);
+  $('#runBtn').disabled = !REPORTS.some(g=>g.entries.some(e=>!isLeave(e)));
   $('#docxAllBtn').disabled = !REPORTS.some(g=>g.cards);
 }
 $('#addGroup').onclick=()=>{ REPORTS.push({id:uid(), name:`선원 ${REPORTS.length+1}`, rank:'', entries:[{vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}], cards:null}); renderGroups(); };
@@ -502,7 +520,7 @@ $('#runBtn').onclick = () => runAll();
 /* ---------------- performance computation ---------------- */
 function inRange(d,a,b){ return d>=a && d<=b; }
 function computeReport(g){
-  const valid = g.entries.filter(e=>e.matched && e.sign_on); if (!valid.length){ g.cards=null; return false; }
+  const valid = g.entries.filter(e=>!isLeave(e) && e.matched && e.sign_on); if (!valid.length){ g.cards=null; return false; }
   const todayISO = today.toISOString().slice(0,10);
   const tot = {insp:0,defs:0,det:0,clean:0,uaN:0,uaH:0,lti:0,days:0};
   g.cards = valid.slice().sort((a,b)=>a.sign_on.localeCompare(b.sign_on)).map(e=>{
@@ -555,7 +573,7 @@ function renderResults(){
 function renderWho(g){
   const lc=latestCard(g); const rank=lc?.e.rank||g.rank||''; const name=g.name||'조회 선원';
   $(`#who-${g.id}`).innerHTML = `<div class="avatar">${esc(name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?')}</div>
-    <div class="whoinfo"><div class="name">${esc(name)}</div><div class="meta">${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${g.cards.length}개 승선기간 · ${g.tot.days}일</div></div>
+    <div class="whoinfo"><div class="name">${esc(name)}</div><div class="meta">${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${g.cards.length}개 승선기간 · ${g.tot.days}일${leaveCount(g)?` · <span title="ON BOARD 행만 승선기간으로 반영 — EARNED LEAVE UNPAID 등 휴가·미승선 기간은 승선일수·연환산·평가에서 제외">미승선(휴가 등) ${leaveCount(g)}건 ${leaveDays(g)}일 제외</span>`:''}</div></div>
     <div class="whoright"><button class="btn primary sm" data-docx2="${g.id}" title="이 선원 보고서를 Word(.docx)로 다운로드">📄 Word 다운로드</button></div>`;
   $(`#who-${g.id} [data-docx2]`).onclick=()=>exportDocx([g]);
 }
@@ -579,7 +597,8 @@ function renderTables(g){
   const periodsHtml = `<div class="card period"><div class="hd"><h2>승선 기간 요약 (${cards.length})</h2></div>
     <div class="tbl-wrap"><table><thead><tr><th>Vessel</th><th>Period</th><th>Rank</th><th class="num">Days</th><th class="num">PSC</th><th class="num">Def.</th><th class="num">무결함 (%)</th><th class="num">Detention</th><th class="num">Events</th><th class="num">Unavail. (h)</th><th class="num">LTIF</th></tr></thead>
     <tbody>${cards.map(c=>`<tr><td><b>${esc(c.e.matched)}</b></td><td class="num">${c.a} ~ ${c.e.sign_off||'<i>on board</i>'}</td><td>${esc(c.e.rank)}</td><td class="num">${c.days}</td><td class="num">${c.s.insp}</td><td class="num">${c.s.defs}</td><td class="num">${c.s.clean}${c.s.insp?` <span class="remark">(${fmtN(100*c.s.clean/c.s.insp,0)}%)</span>`:''}</td><td class="num">${c.s.det||''}</td><td class="num">${c.s.uaN}</td><td class="num">${fmtN(c.s.uaH,1)}</td><td class="num">${c.s.lti||''}</td></tr>`).join('')}
-    <tr style="background:var(--surface2);font-weight:600"><td>합계</td><td></td><td></td><td class="num">${tot.days}</td><td class="num">${tot.insp}</td><td class="num">${tot.defs}</td><td class="num">${tot.clean}${tot.insp?` <span class="remark">(${fmtN(100*tot.clean/tot.insp,0)}%)</span>`:''}</td><td class="num">${tot.det}</td><td class="num">${tot.uaN}</td><td class="num">${fmtN(tot.uaH,1)}</td><td class="num">${tot.lti}</td></tr></tbody></table></div></div>`;
+    ${g.entries.filter(isLeave).map(e=>`<tr style="background:var(--warn-soft);color:var(--ink3)"><td><span class="pill warn">${/LEAVE|VACATION|HOLIDAY/i.test(e.reason||e.vessel)?'🏖 휴가':'⏸ 미승선'}</span> ${esc(e.reason||e.vessel||'NOT ON BOARD')}</td><td class="num">${esc(e.sign_on)} ~ ${esc(e.sign_off||'')}</td><td>${esc(e.rank||'')}</td><td class="num" colspan="8">ON BOARD 아님 — 합계·연환산·평가에서 제외</td></tr>`).join('')}
+    <tr style="background:var(--surface2);font-weight:600"><td>합계 (ON BOARD만)</td><td></td><td></td><td class="num">${tot.days}</td><td class="num">${tot.insp}</td><td class="num">${tot.defs}</td><td class="num">${tot.clean}${tot.insp?` <span class="remark">(${fmtN(100*tot.clean/tot.insp,0)}%)</span>`:''}</td><td class="num">${tot.det}</td><td class="num">${tot.uaN}</td><td class="num">${fmtN(tot.uaH,1)}</td><td class="num">${tot.lti}</td></tr></tbody></table></div></div>`;
   const pscHtml = `<div class="card period"><div class="hd"><h2>1. PSC Inspections</h2>
       <div class="kpis"><span class="k">검사<b>${tot.insp}</b></span><span class="k">결함<b>${tot.defs}</b></span><span class="k">무결함<b>${tot.clean}${tot.insp?` (${fmtN(100*tot.clean/tot.insp,0)}%)`:''}</b></span><span class="k">Detention<b>${tot.det}</b></span></div></div>
     ${rows.length?`<div class="tbl-wrap"><table>
@@ -614,6 +633,8 @@ function buildPayload(g){
   return { seafarer:g.name||null, rank:g.rank||null, today: today.toISOString().slice(0,10),
     fleet_average_per_vessel:{ [Y+' YTD']:per(fa), [String(PY)]:per(fb) }, fleet_flawless_rate_by_mou_pct_ytd: fleet_mou,
     totals:{...g.tot, days_on_board:g.tot.days}, psc_by_mou:g.mou,
+    not_on_board_periods:g.entries.filter(isLeave).map(e=>({status:e.reason||e.vessel, sign_on:e.sign_on, sign_off:e.sign_off||null})), not_on_board_days_excluded:leaveDays(g),
+    note:'Only rows with status ON BOARD are sea service. not_on_board_periods (e.g. EARNED LEAVE UNPAID) are leave/shore periods: already excluded from days_on_board, annualised figures and all KPI counts; do not treat them as vessel service or as a negative.',
     periods:g.cards.map(c=>({ vessel:c.e.matched, rank:c.e.rank||null, sign_on:c.a, sign_off:c.e.sign_off||'on board', days:c.days, stats:c.s,
       psc:c.psc.map(p=>({date:p.date, port:p.port, country:p.country, mou:p.mou, deficiencies:p.def_count, code17:p.code17, code30:p.code30, detention:p.detention, items:p.deficiencies.slice(0,12).map(d=>`[${d.code}] ${d.desc.slice(0,120)}`)})),
       unscheduled_stoppage:c.ua.map(u=>({date:u.date, hours:u.hours, remark:u.remark, kpi:u.kpi})),
@@ -672,7 +693,7 @@ function reportBody(g, first){
   b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40,pageBreak:!first});
   b += para(`Wilhelmsen Ship Management Korea · HSEQ · 생성일 ${today.toISOString().slice(0,10)}`,{size:9,color:'64748B',after:160});
   b += h1('1. 선원 정보');
-  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${g.cards.length}개 · 총 ${t.days}일`]],[2400,7200]);
+  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${g.cards.length}개 · 총 ${t.days}일`]].concat(leaveCount(g)?[['미승선 기간 (제외)',`${leaveCount(g)}건 · ${leaveDays(g)}일 (${g.entries.filter(isLeave).map(e=>`${e.reason||e.vessel||'NOT ON BOARD'} ${e.sign_on}~${e.sign_off||''}`).join(', ')}) — ON BOARD 행만 승선기간으로 반영`]]:[]),[2400,7200]);
   b += h1('2. Fleet Average per Vessel vs 본인 실적 (연환산)');
   const yrs=Math.max(t.days,1)/365;
   b += table(['지표',`${Y} YTD (척당)`,`${PY} (척당)`,'본인 합계','본인 연환산 (척·년)','판정'],[
@@ -698,7 +719,8 @@ function reportBody(g, first){
   b += h1('5. 승선 기간 요약');
   b += table(['Vessel','Period','Rank','Days','PSC','Def.','무결함 (%)','Det.','Events','Unavail.(h)','LTIF'],
     g.cards.map(c=>[c.e.matched,`${c.a} ~ ${c.e.sign_off||'on board'}`,c.e.rank||'',`${c.days}`,`${c.s.insp}`,`${c.s.defs}`,c.s.insp?`${c.s.clean} (${f(100*c.s.clean/c.s.insp,0)}%)`:`${c.s.clean}`,`${c.s.det}`,`${c.s.uaN}`,f(c.s.uaH,1),`${c.s.lti}`])
-    .concat([['합계','','',`${t.days}`,`${t.insp}`,`${t.defs}`,t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,`${t.det}`,`${t.uaN}`,f(t.uaH,1),`${t.lti}`]]),[1700,1900,600,600,600,600,1000,600,700,800,500]);
+    .concat(g.entries.filter(isLeave).map(e=>[`미승선 · ${e.reason||e.vessel||'NOT ON BOARD'}`,`${e.sign_on} ~ ${e.sign_off||''}`,e.rank||'','(제외)','','','','','','','']))
+    .concat([['합계 (ON BOARD만)','','',`${t.days}`,`${t.insp}`,`${t.defs}`,t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,`${t.det}`,`${t.uaN}`,f(t.uaH,1),`${t.lti}`]]),[1700,1900,600,600,600,600,1000,600,700,800,500]);
   const psc=[],ua=[],lti=[]; g.cards.forEach(c=>{c.psc.forEach(p=>psc.push({c,p}));c.ua.forEach(u=>ua.push({c,u}));c.lti.forEach(l=>lti.push({c,l}));});
   b += h1(`6. PSC Inspections (${psc.length}) — 검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det}`);
   if (psc.length){
