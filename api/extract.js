@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
 
   const payload = {
     model: MODEL,
-    max_tokens: 2000,
+    max_tokens: 8000,
     system: SYSTEM,
     messages: [{
       role: "user",
@@ -64,11 +64,24 @@ module.exports = async (req, res) => {
 
   const text = (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
   let parsed = null;
+  const repair = (t) => { // close a truncated JSON (open strings / arrays / objects), drop a dangling partial entry
+    let s2 = t.replace(/,\s*\{[^{}]*$/, ""), inStr = false, esc = false, stack = [];
+    for (const ch of s2) {
+      if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true; else if (ch === "{" || ch === "[") stack.push(ch); else if (ch === "}" || ch === "]") stack.pop();
+    }
+    if (inStr) s2 += '"';
+    s2 = s2.replace(/,\s*$/, "");
+    while (stack.length) { const o = stack.pop(); s2 += o === "{" ? "}" : "]"; }
+    return JSON.parse(s2);
+  };
   try {
-    const m = text.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(m ? m[0] : text);
+    const start = text.indexOf("{"); if (start < 0) throw new Error("no json");
+    let t = text.slice(start).replace(/```[a-z]*\n?|```/g, "").trim();
+    const end = t.lastIndexOf("}"); const tt = end > 0 ? t.slice(0, end + 1) : t;
+    try { parsed = JSON.parse(tt); } catch { parsed = repair(t); }
   } catch {
-    return res.status(422).json({ error: "모델 응답을 JSON으로 해석할 수 없습니다.", raw: text });
+    return res.status(422).json({ error: "모델 응답을 JSON으로 해석할 수 없습니다" + (out.stop_reason === "max_tokens" ? " (응답이 잘림 — 표를 나누어 캡처해 주세요)" : "") + ".", raw: String(text).slice(0, 500) });
   }
   const entries = (parsed.entries || []).filter(e => e && e.vessel && e.sign_on).map(e => ({
     vessel: String(e.vessel).trim(),
