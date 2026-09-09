@@ -9,7 +9,7 @@ const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-4-5";
 const SYSTEM = `You read screenshots of a seafarer's sea-service record (승선 이력 / crew career table) from a ship-management crewing system.
 Extract every row that describes a period on board a vessel.
 Return ONLY a JSON object of this shape, no prose:
-{"seafarer": "<name if visible, else null>", "entries":[{"vessel":"<vessel name as written>","rank":"<rank if visible, else null>","sign_on":"YYYY-MM-DD","sign_off":"YYYY-MM-DD or null if still on board / blank"}]}
+{"seafarer": "<seafarer name if visible, else null>", "rank": "<seafarer's current/latest rank if shown in a header (e.g. Master, C/E), else null>", "entries":[{"vessel":"<vessel name as written>","rank":"<rank if visible, else null>","sign_on":"YYYY-MM-DD","sign_off":"YYYY-MM-DD or null if still on board / blank"}]}
 Rules:
 - Dates may appear as DD/MM/YYYY, YYYY.MM.DD, DD-MMM-YY, etc. Convert to ISO YYYY-MM-DD. If the day is missing, use 01. If a year is 2 digits, assume 20xx.
 - If a row shows only one date or the sign-off is blank / "present" / "~", set sign_off to null.
@@ -77,6 +77,7 @@ module.exports = async (req, res) => {
   }));
   res.status(200).json({
     seafarer: parsed.seafarer || null,
+    rank: parsed.rank || null,
     entries,
     model: MODEL,
     ms: Date.now() - t0,
