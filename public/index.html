@@ -809,83 +809,160 @@ function renderAssessBody(g){
 /* ---------------- Word (.docx) export — no external library ---------------- */
 $('#docxAllBtn').onclick = () => exportDocx(REPORTS.filter(g=>g.cards));
 const X = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-function run(t,o={}){ return `<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}<w:sz w:val="${(o.size||10)*2}"/><w:rFonts w:ascii="Malgun Gothic" w:hAnsi="Malgun Gothic" w:eastAsia="Malgun Gothic"/></w:rPr><w:t xml:space="preserve">${X(t)}</w:t></w:r>`; }
-function para(t,o={}){ const runs = Array.isArray(t)? t.map(r=>run(r.t,r)).join('') : run(t,o); return `<w:p><w:pPr>${o.pageBreak?'<w:pageBreakBefore/>':''}<w:spacing w:before="${o.before??60}" w:after="${o.after??60}"/>${o.align?`<w:jc w:val="${o.align}"/>`:''}</w:pPr>${runs}</w:p>`; }
-function h1(t){ return para(t,{b:true,size:16,color:'0B3D6B',before:240,after:80}); }
-function h2(t){ return para(t,{b:true,size:12.5,color:'12579A',before:200,after:60}); }
-function bullet(t){ return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/><w:ind w:left="360" w:hanging="200"/></w:pPr>${run('• '+t,{size:10})}</w:p>`; }
-function table(header, rows, widths){
-  const total = 9600; const w = widths || header.map(()=>Math.floor(total/header.length));
-  const cell=(t,i,hdr)=>`<w:tc><w:tcPr><w:tcW w:w="${w[i]}" w:type="dxa"/>${hdr?'<w:shd w:val="clear" w:color="auto" w:fill="E6EEF7"/>':''}</w:tcPr>${para(t,{b:hdr,size:hdr?9:9.5,before:30,after:30})}</w:tc>`;
-  const tr=(cells,hdr)=>`<w:tr>${hdr?'<w:trPr><w:tblHeader/></w:trPr>':''}${cells.map((c,i)=>cell(c,i,hdr)).join('')}</w:tr>`;
-  return `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:left w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:right w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="E2E8F0"/><w:insideV w:val="single" w:sz="4" w:color="E2E8F0"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x=>`<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${tr(header,true)}${rows.map(r=>tr(r,false)).join('')}</w:tbl>${para('',{before:0,after:0})}`;
+/* ---- Word 서식 팔레트 (웹 화면과 동일 계열) ---- */
+const DC={brand:'0B3D6B',brand2:'12579A',ink:'0F172A',ink2:'475569',ink3:'94A3B8',line:'CBD5E1',line2:'E2E8F0',soft:'F1F5F9',brandSoft:'E6EEF7',good:'1A7F4B',goodSoft:'E3F5EA',warn:'A05A00',warnSoft:'FFF2DF',crit:'B3261E',critSoft:'FBE7E6',amber:'F59E0B',navy:'0B3D6B'};
+function run(t,o={}){ return `<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}${o.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`:''}<w:sz w:val="${Math.round((o.size||10)*2)}"/><w:rFonts w:ascii="Malgun Gothic" w:hAnsi="Malgun Gothic" w:eastAsia="Malgun Gothic"/></w:rPr><w:t xml:space="preserve">${X(t).split('\n').join('</w:t><w:br/><w:t xml:space="preserve">')}</w:t></w:r>`; }
+function para(t,o={}){ const runs = Array.isArray(t)? t.map(r=>run(r.t,r)).join('') : run(t,o); return `<w:p><w:pPr>${o.pageBreak?'<w:pageBreakBefore/>':''}${o.keep?'<w:keepNext/>':''}<w:spacing w:before="${o.before??60}" w:after="${o.after??60}" w:line="${o.line||276}" w:lineRule="auto"/>${o.align?`<w:jc w:val="${o.align}"/>`:''}${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.border?`<w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="${o.border}"/></w:pBdr>`:''}</w:pPr>${runs}</w:p>`; }
+function h1(t,n){ return `<w:p><w:pPr><w:keepNext/><w:spacing w:before="300" w:after="100"/><w:pBdr><w:bottom w:val="single" w:sz="8" w:space="2" w:color="${DC.brand}"/></w:pBdr></w:pPr>${n!=null?run(String(n).padStart(2,'0')+'  ',{b:true,size:14,color:DC.brand2}):''}${run(t,{b:true,size:14,color:DC.brand})}</w:p>`; }
+function h2(t){ return para(t,{b:true,size:11.5,color:DC.brand2,before:200,after:60,keep:true}); }
+function bullet(t,o={}){ return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/><w:ind w:left="${(o.ind||360)}" w:hanging="200"/></w:pPr>${run('•  ',{size:o.size||10,color:DC.brand2})}${run(t,{size:o.size||10,color:o.color})}</w:p>`; }
+function note(t){ return para(t,{size:8.5,color:DC.ink3,before:60,after:60}); }
+/* 셀 내용: 문자열 | {t, b, color, fill, align, size} | [runs] */
+function tcell(c,w,o={}){
+  const v = (c && typeof c==='object' && !Array.isArray(c)) ? c : {t:c};
+  const fill = v.fill||o.fill; const runs = Array.isArray(v.t)? v.t : [{t:String(v.t??''), b:v.b??o.b, color:v.color||o.color, size:v.size||o.size||9.5}];
+  return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${o.span?`<w:gridSpan w:val="${o.span}"/>`:''}${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:''}<w:tcMar><w:top w:w="50" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="50" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tcMar>${o.vAlign?`<w:vAlign w:val="${o.vAlign}"/>`:''}</w:tcPr>${para(runs,{before:20,after:20,align:v.align||o.align})}</w:tc>`;
 }
+function tbl(header, rows, widths, o={}){
+  const total = 9800; const w = widths || header.map(()=>Math.floor(total/header.length));
+  const bc = o.borderColor||DC.line, ic = o.innerColor||DC.line2;
+  const trH = header ? `<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>${header.map((h,i)=>tcell(h,w[i],{fill:o.headFill||DC.brand,b:true,color:o.headColor||'FFFFFF',size:o.headSize||9,align:o.aligns?o.aligns[i]:undefined})).join('')}</w:tr>` : '';
+  const trs = rows.map((r,ri)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map((c,i)=>{ const fill = (o.zebra && ri%2) ? DC.soft : undefined; const v=(c&&typeof c==='object'&&!Array.isArray(c))?c:{t:c}; return tcell({...v, fill:v.fill||fill}, w[i], {align:o.aligns?o.aligns[i]:undefined, b:(o.boldFirst&&i===0)||undefined, size:o.size}); }).join('')}</w:tr>`).join('');
+  return `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:color="${bc}"/><w:left w:val="single" w:sz="6" w:color="${bc}"/><w:bottom w:val="single" w:sz="6" w:color="${bc}"/><w:right w:val="single" w:sz="6" w:color="${bc}"/><w:insideH w:val="single" w:sz="4" w:color="${ic}"/><w:insideV w:val="single" w:sz="4" w:color="${ic}"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x=>`<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${trH}${trs}</w:tbl>${para('',{before:0,after:40})}`;
+}
+const table = (h,r,w)=>tbl(h,r,w,{zebra:true});
+/* 단일 셀 박스 (왼쪽 굵은 색 테두리 + 연한 배경) — 카드 느낌 */
+function box(inner, o={}){
+  const fill=o.fill||DC.soft, accent=o.accent||DC.brand;
+  return `<w:tbl><w:tblPr><w:tblW w:w="9800" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="${DC.line2}"/><w:left w:val="single" w:sz="24" w:color="${accent}"/><w:bottom w:val="single" w:sz="4" w:color="${DC.line2}"/><w:right w:val="single" w:sz="4" w:color="${DC.line2}"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="9800"/></w:tblGrid><w:tr><w:trPr>${o.split?'':'<w:cantSplit/>'}</w:trPr><w:tc><w:tcPr><w:tcW w:w="9800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/><w:tcMar><w:top w:w="100" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tcMar></w:tcPr>${inner||para('')}</w:tc></w:tr></w:tbl>${para('',{before:0,after:60})}`;
+}
+/* 제목 밴드 (브랜드 색 배경) */
+function band(title, sub, meta){
+  const cell=(inner,w,align)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${DC.brand}"/><w:tcMar><w:top w:w="160" w:type="dxa"/><w:left w:w="200" w:type="dxa"/><w:bottom w:w="160" w:type="dxa"/><w:right w:w="200" w:type="dxa"/></w:tcMar><w:vAlign w:val="center"/></w:tcPr>${inner}</w:tc>`;
+  const left = para([{t:'W',b:true,size:22,color:'FFFFFF'},{t:'   '+title,b:true,size:18,color:'FFFFFF'}],{before:0,after:20}) + para(sub,{size:9.5,color:'CBD5E1',before:0,after:0});
+  const right = para(meta.map(m=>({t:m,size:8.5,color:'CBD5E1'})).flatMap((r,i)=>i?[{t:'\n',size:8.5},r]:[r]).map(r=>r.t==='\n'?{t:' · ',size:8.5,color:'CBD5E1'}:r),{align:'right',before:0,after:0});
+  return `<w:tbl><w:tblPr><w:tblW w:w="9800" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="24" w:color="${DC.amber}"/><w:right w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="6600"/><w:gridCol w:w="3200"/></w:tblGrid><w:tr>${cell(left,6600)}${cell(right,3200,'right')}</w:tr></w:tbl>${para('',{before:0,after:80})}`;
+}
+/* KPI 타일 6개 (웹 상단 타일과 동일 정보) */
+function tiles(items){
+  const w=Math.floor(9800/3); const rows=[items.slice(0,3),items.slice(3,6)];
+  const cell=t=>{ const jc=t.cls==='good'?DC.good:t.cls==='bad'?DC.crit:DC.ink2; const jf=t.cls==='good'?DC.goodSoft:t.cls==='bad'?DC.critSoft:DC.soft;
+    const inner = para(t.lbl.toUpperCase(),{b:true,size:8,color:DC.ink2,before:0,after:0}) + para(t.unit,{size:7.5,color:DC.ink3,before:0,after:40})
+      + para([{t:t.val,b:true,size:17,color:DC.ink},{t:'  '+(t.valNote||''),size:8,color:DC.ink3}],{before:0,after:20})
+      + para([{t:`${Y} YTD  `,size:8,color:DC.ink3},{t:t.now,b:true,size:9.5,color:DC.ink2},{t:`     ${PY}  `,size:8,color:DC.ink3},{t:t.prev,size:9.5,color:DC.ink2}],{before:0,after:40})
+      + (t.judge?para(t.judge,{b:true,size:8.5,color:jc,fill:jf,before:0,after:0}):para('',{before:0,after:0}));
+    return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/><w:tcMar><w:top w:w="110" w:type="dxa"/><w:left w:w="140" w:type="dxa"/><w:bottom w:w="110" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tcMar></w:tcPr>${inner}</w:tc>`; };
+  return `<w:tbl><w:tblPr><w:tblW w:w="9800" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:color="${DC.line}"/><w:left w:val="single" w:sz="6" w:color="${DC.line}"/><w:bottom w:val="single" w:sz="6" w:color="${DC.line}"/><w:right w:val="single" w:sz="6" w:color="${DC.line}"/><w:insideH w:val="single" w:sz="6" w:color="${DC.line}"/><w:insideV w:val="single" w:sz="6" w:color="${DC.line}"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${w}"/><w:gridCol w:w="${w}"/><w:gridCol w:w="${w}"/></w:tblGrid>${rows.map(r=>`<w:tr><w:trPr><w:cantSplit/></w:trPr>${r.map(cell).join('')}</w:tr>`).join('')}</w:tbl>${para('',{before:0,after:60})}`;
+}
+/* SWOT 2×2 */
+function swotGrid(sw){
+  const q=[['💪 Strengths',sw?.strengths,DC.good,DC.goodSoft],['⚠ Weaknesses',sw?.weaknesses,DC.crit,DC.critSoft],['🎯 Opportunities',sw?.opportunities,DC.brand2,DC.brandSoft],['🌊 Threats',sw?.threats,DC.warn,DC.warnSoft]];
+  const cell=([ttl,arr,c,f])=>`<w:tc><w:tcPr><w:tcW w:w="4900" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${f}"/><w:tcMar><w:top w:w="90" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${para(ttl,{b:true,size:10.5,color:c,before:0,after:40})}${(arr&&arr.length?arr:['–']).map(x=>bullet(x,{size:9.5,ind:260})).join('')}</w:tc>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="9800" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:color="FFFFFF"/><w:left w:val="single" w:sz="6" w:color="FFFFFF"/><w:bottom w:val="single" w:sz="6" w:color="FFFFFF"/><w:right w:val="single" w:sz="6" w:color="FFFFFF"/><w:insideH w:val="single" w:sz="12" w:color="FFFFFF"/><w:insideV w:val="single" w:sz="12" w:color="FFFFFF"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4900"/><w:gridCol w:w="4900"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(q[0])}${cell(q[1])}</w:tr><w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(q[2])}${cell(q[3])}</w:tr></w:tbl>${para('',{before:0,after:60})}`;
+}
+/* 막대 그래프 (표 셀 안에 비례 막대) */
+function barChart(rows){
+  const maxH=Math.max(1,...rows.map(r=>r.ua_hours)), maxC=Math.max(1,...rows.map(r=>Math.max(r.ua_count,r.psc_count)));
+  const bar=(v,max,color)=>{ const n=Math.round(28*v/max); return [{t:'█'.repeat(Math.max(n,v?1:0)),color,size:9},{t:' ',size:9}]; };
+  const body=rows.map(r=>[
+    {t:r.system,b:true,size:9.5},
+    {t:[...bar(r.ua_hours,maxH,DC.amber),{t:r.ua_hours?`${r.ua_hours} h · ${r.ua_count}건`:'–',size:8.5,color:DC.warn}]},
+    {t:[...bar(r.psc_count,maxC,DC.navy),{t:r.psc_count?`${r.psc_count}건`:'–',size:8.5,color:DC.brand}]},
+  ]);
+  return tbl(['System','Unplanned Unavailability (h · 건)','PSC 결함 (건)'], body, [2400,4300,3100], {headFill:DC.brandSoft,headColor:DC.brand,innerColor:'FFFFFF',borderColor:DC.line2});
+}
+function pill(txt, kind){ const m={good:[DC.good,DC.goodSoft],bad:[DC.crit,DC.critSoft],warn:[DC.warn,DC.warnSoft],info:[DC.brand2,DC.brandSoft]}[kind]||[DC.ink2,DC.soft]; return {t:' '+txt+' ',b:true,size:9,color:m[0],fill:m[1]}; }
+
 function reportBody(g, first){
   const lc=latestCard(g); const name=g.name||'조회 선원'; const rank=g.rank||lc?.e.rank||'-';
   const {n1,n0}=fleetN(); const fa=yearStats(String(Y)), fb=yearStats(String(PY)); const t=g.tot; const f=(v,d=2)=>fmtN(v,d);
+  const yrs=Math.max(t.days,1)/365; const j=(better,crew,now)=>judge({better,crew,now},t);
   let b='';
-  b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40,pageBreak:!first});
-  b += para(`Wilhelmsen Ship Management Korea · HSEQ · 생성일 ${today.toISOString().slice(0,10)}`,{size:9,color:'64748B',after:160});
-  b += h1('1. 선원 정보');
-  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${g.cards.length}개 · 총 ${t.days}일`]],[2400,7200]);
-  b += h1('2. Fleet Average per Vessel vs 본인 실적 (연환산)');
-  const yrs=Math.max(t.days,1)/365;
-  b += table(['지표',`${Y} YTD (척당)`,`${PY} (척당)`,'본인 합계','본인 연환산 (척·년)','판정'],[
-    ['PSC Inspections', f(fa.insp/n1), f(fb.insp/n0), `${t.insp}`, f(t.insp/yrs), '-'],
-    ['PSC Deficiencies', f(fa.defs/n1), f(fb.defs/n0), `${t.defs}`, f(t.defs/yrs), judge({better:'low',crew:t.defs/yrs,now:fa.defs/n1},t).txt],
-    ['Deficiency-free rate', fa.insp?f(100*fa.clean/fa.insp,0)+' %':'–', fb.insp?f(100*fb.clean/fb.insp,0)+' %':'–', t.insp?`${t.clean}/${t.insp}`:'–', t.insp?f(100*t.clean/t.insp,0)+' %':'–', t.insp?judge({better:'high',crew:100*t.clean/t.insp,now:fa.insp?100*fa.clean/fa.insp:null},t).txt:'-'],
-    ['PSC Detentions', `${fa.det}건 (${f(fa.det/n1)}/vsl)`, `${fb.det}건 (${f(fb.det/n0)}/vsl)`, `${t.det}`, f(t.det/yrs), judge({better:'low',crew:t.det/yrs,now:fa.det/n1},t).txt],
-    ['Unplanned Unavailability (h)', f(fa.uaH/n1,1), f(fb.uaH/n0,1), `${f(t.uaH,1)} h (${t.uaN}건)`, f(t.uaH/yrs,1), judge({better:'low',crew:t.uaH/yrs,now:fa.uaH/n1},t).txt],
-    ['LTIF', `${fa.lti}건 (${f(fa.lti/n1)}/vsl)`, `${fb.lti}건 (${f(fb.lti/n0)}/vsl)`, `${t.lti}`, f(t.lti/yrs), judge({better:'low',crew:t.lti/yrs,now:fa.lti/n1},t).txt],
-  ],[2300,1500,1500,1400,1500,1400]);
-  b += h1('3. MOU별 Performance (flawless rate)');
+  if (!first) b += para('',{pageBreak:true,before:0,after:0});
+  b += band('WSMK Crew Performance Report', 'Sea-service record → PSC · Unplanned Unavailability · LTIF · Best shipping practice 기준 평가', [`Wilhelmsen Ship Management Korea · HSEQ`, `생성일 ${today.toISOString().slice(0,10)}`, `Data index ${String(DATA.generated).slice(0,10)}`]);
+  /* 1. 선원 */
+  b += h1('선원 정보',1);
+  b += tbl(null,[
+    [{t:'성명',b:true,fill:DC.brandSoft,color:DC.brand},{t:name,b:true,size:11},{t:'직급',b:true,fill:DC.brandSoft,color:DC.brand},{t:rank,b:true,size:11}],
+    [{t:'최근 승선 선박',b:true,fill:DC.brandSoft,color:DC.brand},{t:lc?`${lc.e.matched}  (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'},{t:'조회 승선기간',b:true,fill:DC.brandSoft,color:DC.brand},{t:`${g.cards.length}개 · 총 ${t.days}일 (${f(yrs,2)}년)`}],
+    [{t:'승선 기간 요약',b:true,fill:DC.brandSoft,color:DC.brand},{t:`PSC 검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det} · Unplanned Unavailability ${f(t.uaH,1)} h (${t.uaN}건) · LTI/LTS ${t.lti}`,size:9.5},{t:'기준',b:true,fill:DC.brandSoft,color:DC.brand},{t:`Type/Status에 'On Board'가 포함된 행의 Start~End Date만 승선 기간으로 반영`,size:8.5,color:DC.ink2}],
+  ],[1500,3900,1300,3100]);
+  /* 2. 타일 */
+  b += h1(`Fleet Average per Vessel vs 본인 실적 (연환산 · ${Y} YTD ${n1}척 / ${PY} ${n0}척)`,2);
+  const T=[
+    {lbl:'PSC Inspections',unit:'/ vessel · yr',val:f(t.insp/yrs),valNote:`(${t.insp}건)`,now:f(fa.insp/n1),prev:f(fb.insp/n0),judge:'',cls:''},
+    {lbl:'PSC Deficiencies',unit:'/ vessel · yr',val:f(t.defs/yrs),valNote:`(${t.defs}건)`,now:f(fa.defs/n1),prev:f(fb.defs/n0),...(x=>({judge:x.txt,cls:x.cls}))(j('low',t.defs/yrs,fa.defs/n1))},
+    {lbl:'Deficiency-free rate',unit:'% of inspections',val:t.insp?f(100*t.clean/t.insp,0)+' %':'–',valNote:t.insp?`(${t.clean}/${t.insp})`:'',now:fa.insp?f(100*fa.clean/fa.insp,0)+' %':'–',prev:fb.insp?f(100*fb.clean/fb.insp,0)+' %':'–',...(x=>({judge:x.txt,cls:x.cls}))(t.insp?j('high',100*t.clean/t.insp,fa.insp?100*fa.clean/fa.insp:null):{txt:'',cls:''})},
+    {lbl:'PSC Detentions',unit:'count (per vessel · yr)',val:`${t.det}건`,valNote:`(${f(t.det/yrs)}/yr)`,now:`${fa.det}건 (${f(fa.det/n1)}/vsl)`,prev:`${fb.det}건 (${f(fb.det/n0)}/vsl)`,...(x=>({judge:x.txt,cls:x.cls}))(j('low',t.det/yrs,fa.det/n1))},
+    {lbl:'Unplanned Unavailability',unit:'hours / vessel · yr',val:f(t.uaH/yrs,1),valNote:`(${f(t.uaH,1)} h · ${t.uaN}건)`,now:f(fa.uaH/n1,1),prev:f(fb.uaH/n0,1),...(x=>({judge:x.txt,cls:x.cls}))(j('low',t.uaH/yrs,fa.uaH/n1))},
+    {lbl:'LTIF',unit:'count (per vessel · yr)',val:`${t.lti}건`,valNote:`(${f(t.lti/yrs)}/yr)`,now:`${fa.lti}건 (${f(fa.lti/n1)}/vsl)`,prev:`${fb.lti}건 (${f(fb.lti/n0)}/vsl)`,...(x=>({judge:x.txt,cls:x.cls}))(j('low',t.lti/yrs,fa.lti/n1))},
+  ];
+  b += tiles(T);
+  b += note(`▲ 당해년도(YTD) Fleet average보다 우수 · ▼ Fleet average보다 저조 · 연환산 = 승선기간 합계 ÷ (승선일수/365) · Detention·LTIF는 건수`);
+  /* 3. MOU */
+  b += h1('MOU별 Performance (flawless rate)',3);
   const fm1=fleetMou(String(Y)), fm0=fleetMou(String(PY)); const mk=Object.keys(g.mou).sort((a,c)=>g.mou[c].inspections-g.mou[a].inspections);
-  b += mk.length ? table(['MOU','검사','무결함','본인 flawless','함대 '+Y+' YTD','함대 '+PY,'결함','Detention'], mk.map(k=>{const v=g.mou[k],f1=fm1[k],f0=fm0[k]; return [k,`${v.inspections}`,`${v.deficiency_free}`,`${v.flawless_rate_pct} %`,f1?`${Math.round(100*f1.c/f1.n)} % (${f1.c}/${f1.n})`:'-',f0?`${Math.round(100*f0.c/f0.n)} % (${f0.c}/${f0.n})`:'-',`${v.deficiencies}`,`${v.detentions}`];}),[1900,900,1000,1300,1500,1500,800,700]) : para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:'94A3B8'});
-  b += h1('4. Performance Assessment (Best shipping practice 기준)');
+  b += mk.length ? tbl(['MOU','검사','무결함','본인 flawless',`함대 ${Y} YTD`,`함대 ${PY}`,'결함','Detention'], mk.map(k=>{const v=g.mou[k],f1=fm1[k],f0=fm0[k]; const fr=f1?100*f1.c/f1.n:null; const cls=fr==null?'':v.flawless_rate_pct>=fr?'good':'bad'; return [{t:k,b:true},`${v.inspections}`,`${v.deficiency_free}`,{t:`${v.flawless_rate_pct} %`,b:true,color:cls==='good'?DC.good:cls==='bad'?DC.crit:DC.ink,fill:cls==='good'?DC.goodSoft:cls==='bad'?DC.critSoft:undefined},f1?`${Math.round(fr)} % (${f1.c}/${f1.n})`:'-',f0?`${Math.round(100*f0.c/f0.n)} % (${f0.c}/${f0.n})`:'-',`${v.deficiencies}`,{t:`${v.detentions}`,color:v.detentions?DC.crit:undefined,b:!!v.detentions}];}),[1900,800,900,1300,1600,1500,900,900],{zebra:true,aligns:['left','center','center','center','center','center','center','center']}) : para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:DC.ink3});
+  /* 4. 평가 */
+  b += h1('Performance Assessment (Best shipping practice 기준)',4);
   if (g.assess) {
-    const a=g.assess;
-    b += para([{t:'판정: ',b:true,size:10.5},{t:a.rating||'',b:true,size:10.5,color:/above/i.test(a.rating)?'1A7F4B':/below/i.test(a.rating)?'B3261E':'12579A'}]);
-    b += para(a.summary||'',{size:10});
-    [['Strengths',a.swot?.strengths,'1A7F4B'],['Weaknesses',a.swot?.weaknesses,'B3261E'],['Opportunities',a.swot?.opportunities,'12579A'],['Threats',a.swot?.threats,'A05A00']].forEach(([k,arr,c])=>{ b+=para(k,{b:true,size:10.5,color:c,before:120,after:40}); (arr||[]).forEach(x=>b+=bullet(x)); });
-    if (a.recommendation) b += para([{t:'Recommendation: ',b:true,size:10},{t:a.recommendation,size:10}],{before:120});
+    const a=g.assess; const kind=/above/i.test(a.rating)?'good':/below/i.test(a.rating)?'bad':'info';
+    b += box(para([{t:name+'  ',b:true,size:11},pill(a.rating||'',kind),{t:`   ${g.cards.length}개 승선기간 · ${t.days}일 · PSC ${t.insp} · Def. ${t.defs} · Detention ${t.det} · Unavail. ${f(t.uaH,1)} h (${t.uaN}) · LTIF ${t.lti}`,size:8.5,color:DC.ink3}],{before:0,after:60}) + para(a.summary||'',{size:10,before:0,after:0}),{fill:'FFFFFF',accent:kind==='good'?DC.good:kind==='bad'?DC.crit:DC.brand2});
+    b += swotGrid(a.swot);
+    if (a.recommendation) b += box(para([{t:'Recommendation  ',b:true,size:10.5,color:DC.brand},{t:a.recommendation,size:10}],{before:0,after:0}),{fill:DC.brandSoft,accent:DC.brand});
+    /* SSMM */
     if (g.ssmm && (g.ssmm.focus||[]).length){
-      b += para('SSMM 이행 강조 사항 (SWOT → SSMM Rev 47 조항)',{b:true,size:11,color:'0B3D6B',before:200,after:60});
-      g.ssmm.focus.forEach((f,i)=>{ b += para([{t:`${i+1}. SSMM ${f.section} ${f.title}`,b:true,size:10.5},{t:(f.clauses||[]).length?`  (${f.clauses.join(', ')})`:'',size:9.5,color:'64748B'}],{before:80,after:30}); b += para(f.why||'',{size:10}); (f.actions||[]).forEach(x=>b+=bullet(x)); });
-      if (g.ssmm.overall) b += para([{t:'종합: ',b:true,size:10},{t:g.ssmm.overall,size:10}],{before:80});
+      b += h2('📘 SSMM 이행 강조 사항  —  SWOT 약점·위협 및 기록 사건 → SSMM Rev 47 조항');
+      g.ssmm.focus.forEach((x,i)=>{
+        b += box(para([{t:`${i+1}  `,b:true,size:10,color:DC.ink3},{t:` SSMM ${x.section} `,b:true,size:9,color:'FFFFFF',fill:DC.brand},{t:'  '+(x.title||''),b:true,size:10.5},{t:(x.clauses||[]).length?`   ${x.clauses.join(' · ')}`:'',size:8.5,color:DC.ink3}],{before:0,after:30}) + para(x.why||'',{size:9.5,color:DC.ink2,before:0,after:30}) + (x.actions||[]).map(y=>bullet(y,{size:9.5,ind:300})).join(''),{fill:'FFFFFF',accent:DC.brand2});
+      });
+      if (g.ssmm.overall) b += box(para([{t:'종합  ',b:true,size:10,color:DC.brand},{t:g.ssmm.overall,size:10}],{before:0,after:0}),{fill:DC.brandSoft,accent:DC.brand});
+      b += note(`※ ${g.ssmm.source||'SSMM'} 발췌 색인을 근거로 Claude가 제안한 참고용 항목임. 적용 전 최신 SSMM 원문 확인 필요.`);
     }
+    /* Engineer */
     if (g.eng && g.eng.recommendation && (g.eng.recommendation.headline||(g.eng.recommendation.guidance||[]).length)){
       const r=g.eng.recommendation;
-      b += para(`Engineer Recommendation (Unplanned Unavailability · PSC 기관 관련 결함 기반 · ${rankOf(g)})`,{b:true,size:11,color:'0B3D6B',before:200,after:60});
-      if (r.headline) b += para([{t:'핵심: ',b:true,size:10},{t:r.headline,size:10}],{after:40});
-      (r.guidance||[]).forEach((x,i)=>{ b += para([{t:`${i+1}. ${x.topic}`,b:true,size:10.5},{t:x.ref?`  (↳ ${x.ref})`:'',size:9.5,color:'64748B'}],{before:80,after:30}); b += para(x.guide||'',{size:10}); });
+      b += h2(`🧭 Engineer Recommendation  —  Unplanned Unavailability · PSC 기관 관련 결함 기반 차기 승선 가이드 (${rankOf(g)})`);
+      if (r.headline) b += box(para([{t:'핵심  ',b:true,size:10,color:DC.good},{t:r.headline,size:10}],{before:0,after:0}),{fill:DC.goodSoft,accent:DC.good});
+      (r.guidance||[]).forEach((x,i)=>{ b += box(para([{t:`${i+1}  `,b:true,size:10,color:DC.ink3},{t:x.topic,b:true,size:10.5},{t:x.ref?`   ↳ ${x.ref}`:'',size:8.5,color:DC.ink3}],{before:0,after:30}) + para(x.guide||'',{size:9.5,color:DC.ink2,before:0,after:0}),{fill:'FFFFFF',accent:DC.good}); });
     }
     if (g.eng && (g.eng.items||[]).length){
-      b += para(`기관부 PMS·기기 보완 점검 (Best shipping practice 기준 · ${rankOf(g)})`,{b:true,size:11,color:'0B3D6B',before:200,after:60});
-      g.eng.items.forEach((x,i)=>{ b += para([{t:`${i+1}. [${x.priority}] ${x.system}`,b:true,size:10.5},{t:x.equipment?` — ${x.equipment}`:'',size:10}],{before:80,after:30}); b += bullet(`점검: ${x.check}`); if(x.pms) b += bullet(`PMS 반영: ${x.pms}`); if(x.basis) b += bullet(`근거: ${x.basis}`); if(x.link) b += bullet(`연계: ${x.link}`); });
-      if (g.eng.overall) b += para([{t:'종합: ',b:true,size:10},{t:g.eng.overall,size:10}],{before:80});
+      b += h2(`🔧 기관부 PMS·기기 보완 점검  —  Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준 (${rankOf(g)})`);
+      const pk=p=>p==='상'?'bad':p==='하'?'info':'warn';
+      b += tbl(['우선','System / 기기','보완 점검 내용','PMS 반영','근거'], g.eng.items.map(x=>[pill(x.priority,pk(x.priority)),{t:[{t:x.system,b:true,size:9.5},{t:x.equipment?'\n'+x.equipment:'',size:8.5,color:DC.ink2}]},{t:[{t:x.check,size:9},{t:x.link?'\n↳ '+x.link:'',size:8,color:DC.ink3}]},{t:x.pms,size:9},{t:x.basis,size:8,color:DC.ink2}]),[700,2000,3200,2300,1600],{zebra:true,aligns:['center']});
+      if (g.eng.overall) b += box(para([{t:'종합  ',b:true,size:10,color:DC.warn},{t:g.eng.overall,size:10}],{before:0,after:0}),{fill:DC.warnSoft,accent:DC.amber});
+      b += note('※ 승선 선박 KPI 기록과 SWOT를 바탕으로 Claude가 best shipping practice 기준으로 제안한 참고용 점검 항목임. 실제 PMS 반영 전 선박별 maker 지침·Class 요건 확인 필요.');
     }
     if (g.eng && (g.eng.breakdown||[]).length){
-      b += para('사건 발생 기기 분석 (Unplanned Unavailability · 기관 관련 PSC 결함, system별)',{b:true,size:11,color:'0B3D6B',before:200,after:60});
-      b += table(['System','Unplanned Unavailability','PSC 결함','사건'], g.eng.breakdown.slice().sort((x,y)=>y.ua_hours-x.ua_hours).map(r=>[r.system, r.ua_count?`${r.ua_count}건 · ${r.ua_hours} h`:'-', String(r.psc_count||'-'), (r.events||[]).join('; ')]), [2200,1800,1000,4600]);
+      const rows=g.eng.breakdown.slice().sort((x,y)=>(y.ua_hours-x.ua_hours)||((y.ua_count+y.psc_count)-(x.ua_count+x.psc_count)));
+      const tot=rows.reduce((acc,r)=>({h:acc.h+r.ua_hours,u:acc.u+r.ua_count,p:acc.p+r.psc_count}),{h:0,u:0,p:0});
+      b += h2(`📊 사건 발생 기기 분석  —  Unplanned Unavailability ${f(tot.h,1)} h (${tot.u}건) · 기관 관련 PSC 결함 ${tot.p}건 (system별)`);
+      b += barChart(rows);
+      b += tbl(['System','UA','PSC','사건'], rows.map(r=>[{t:r.system,b:true},r.ua_count?`${r.ua_count}건 · ${r.ua_hours} h`:'–',String(r.psc_count||'–'),{t:(r.events||[]).map(e=>'• '+e).join('\n'),size:8.5,color:DC.ink2}]),[2200,1500,900,5200],{zebra:true,aligns:['left','center','center','left']});
     }
-    b += para(`※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude(${a.model||''})가 생성한 참고용 평가임. 개인 귀책 판단 시 사고보고서·감사 결과 등 원자료 확인 필요.`,{size:8.5,color:'94A3B8',before:80});
-  } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 생성 완료 후 다시 다운로드하십시오)',{i:true,size:9.5,color:'94A3B8'});
-  b += h1('5. 승선 기간 요약');
-  b += table(['Vessel','Period','Rank','Days','PSC','Def.','무결함 (%)','Det.','Events','Unavail.(h)','LTIF'],
-    g.cards.map(c=>[c.e.matched,`${c.a} ~ ${c.e.sign_off||'on board'}`,c.e.rank||'',`${c.days}`,`${c.s.insp}`,`${c.s.defs}`,c.s.insp?`${c.s.clean} (${f(100*c.s.clean/c.s.insp,0)}%)`:`${c.s.clean}`,`${c.s.det}`,`${c.s.uaN}`,f(c.s.uaH,1),`${c.s.lti}`])
-    .concat([['합계','','',`${t.days}`,`${t.insp}`,`${t.defs}`,t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,`${t.det}`,`${t.uaN}`,f(t.uaH,1),`${t.lti}`]]),[1700,1900,600,600,600,600,1000,600,700,800,500]);
+    b += note(`※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude(${a.model||''})가 생성한 참고용 평가임. 개인 귀책 판단 시 사고보고서·감사 결과 등 원자료 확인 필요.`);
+  } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 생성 완료 후 다시 다운로드하십시오)',{i:true,size:9.5,color:DC.ink3});
+  /* 5. 승선 기간 */
+  b += h1(`승선 기간 요약 (${g.cards.length})`,5);
+  const A=['left','left','left','right','right','right','right','right','right','right','right'];
+  b += tbl(['Vessel','Period','Rank','Days','PSC','Def.','무결함 (%)','Det.','Events','Unavail.(h)','LTIF'],
+    g.cards.map(c=>[{t:c.e.matched,b:true},`${c.a} ~ ${c.e.sign_off||'on board'}`,c.e.rank||'',`${c.days}`,`${c.s.insp}`,{t:`${c.s.defs}`,color:c.s.defs?DC.crit:undefined},c.s.insp?`${c.s.clean} (${f(100*c.s.clean/c.s.insp,0)}%)`:`${c.s.clean}`,{t:`${c.s.det}`,color:c.s.det?DC.crit:undefined,b:!!c.s.det},`${c.s.uaN}`,{t:f(c.s.uaH,1),color:c.s.uaH?DC.warn:undefined},`${c.s.lti}`])
+    .concat([[{t:'합계',b:true,fill:DC.brandSoft},{t:'',fill:DC.brandSoft},{t:'',fill:DC.brandSoft},{t:`${t.days}`,b:true,fill:DC.brandSoft},{t:`${t.insp}`,b:true,fill:DC.brandSoft},{t:`${t.defs}`,b:true,fill:DC.brandSoft},{t:t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,b:true,fill:DC.brandSoft},{t:`${t.det}`,b:true,fill:DC.brandSoft},{t:`${t.uaN}`,b:true,fill:DC.brandSoft},{t:f(t.uaH,1),b:true,fill:DC.brandSoft},{t:`${t.lti}`,b:true,fill:DC.brandSoft}]]),[1500,1900,900,600,550,550,950,550,650,900,750],{aligns:A,size:8.5,headSize:8});
   const psc=[],ua=[],lti=[]; g.cards.forEach(c=>{c.psc.forEach(p=>psc.push({c,p}));c.ua.forEach(u=>ua.push({c,u}));c.lti.forEach(l=>lti.push({c,l}));});
-  b += h1(`6. PSC Inspections (${psc.length}) — 검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det}`);
+  /* 6. PSC */
+  b += h1(`PSC Inspections (${psc.length})  —  검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det}`,6);
   if (psc.length){
-    b += table(['Vessel','Date','Port / Country','MOU','Def.','Code 17','Code 30','Result'], psc.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>[c.e.matched,p.date,`${p.port}${p.country?', '+p.country:''}`,p.mou,`${p.def_count}`,`${p.code17||''}`,`${p.code30||''}`,p.detention?'DETENTION':p.def_count===0?'No deficiency':'Deficiency']),[1800,1000,2000,1300,600,700,700,1500]);
+    b += tbl(['Vessel / Period','Date','Port / Country','MOU','Def.','Code 17','Code 30','Result'], psc.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>[{t:[{t:c.e.matched,b:true,size:9},{t:`\n${c.a} ~ ${c.e.sign_off||'on board'}`,size:7.5,color:DC.ink3}]},p.date,`${p.port}${p.country?', '+p.country:''}`,p.mou,{t:`${p.def_count}`,b:p.def_count>0},{t:`${p.code17||''}`,color:p.code17?DC.crit:undefined,b:!!p.code17},`${p.code30||''}`,p.detention?pill('DETENTION','bad'):p.def_count===0?pill('No deficiency','good'):pill('Deficiency','warn')]),[1900,950,1900,1200,600,700,700,1850],{zebra:true,aligns:['left','left','left','left','center','center','center','center'],size:9});
     const withDef=psc.filter(x=>x.p.deficiencies.length);
-    if (withDef.length){ b+=h2('결함 상세'); withDef.forEach(({c,p})=>{ b+=para(`${c.e.matched} · ${p.date} · ${p.port} (${p.mou})${p.detention?' · DETENTION':''}`,{b:true,size:9.5,before:100,after:20}); p.deficiencies.forEach(d=>b+=bullet(`[${d.code||'-'}] ${d.desc}${d.item?` [${d.item}]`:''}`)); }); }
-  } else b += para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:'94A3B8'});
-  b += h1(`7. Unplanned Unavailability — Unscheduled stoppage (${ua.length}건 · ${f(t.uaH,1)} h)`);
-  b += ua.length ? table(['Vessel','Date','Hours','Remark','Docmap'], ua.sort((x,y)=>x.u.date.localeCompare(y.u.date)).map(({c,u})=>[c.e.matched,u.date,`${f(u.hours,1)}${u.hours>=24?` (≥24h, ${f(u.hours/24,1)}d)`:''}`,u.remark+(u.kpi!=='Yes'?` [${u.kpi}]`:''),u.docmap]),[1800,1000,1300,4000,1500]) : para('승선 기간 중 Unscheduled stoppage 없음',{i:true,size:9.5,color:'94A3B8'});
-  b += h1(`8. LTIF / LTSF (${lti.length})`);
-  b += lti.length ? table(['Vessel','Date','Type','Rank','Description'], lti.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>[c.e.matched,l.date,l.type,l.rank,l.desc]),[1800,1000,800,900,5100]) : para('승선 기간 중 LTI/LTS 없음',{i:true,size:9.5,color:'94A3B8'});
-  b += para(`Sources: ${DATA.sources.psc} (Database) · ${DATA.sources.kpi} (Tech Data / Crew Data1) · index ${DATA.generated}`,{size:8,color:'94A3B8',before:240});
+    if (withDef.length){ b+=h2('결함 상세'); withDef.forEach(({c,p})=>{ b+=box(para([{t:`${c.e.matched} · ${p.date} · ${p.port} (${p.mou})`,b:true,size:9.5},{t:p.detention?'   DETENTION':'',b:true,size:9,color:DC.crit}],{before:0,after:30}) + p.deficiencies.map(d=>bullet(`[${d.code||'-'}] ${d.desc}${d.item?` [${d.item}]`:''}`,{size:9,ind:300})).join(''),{fill:'FFFFFF',accent:p.detention?DC.crit:DC.line}); }); }
+  } else b += para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:DC.ink3});
+  /* 7. UA */
+  b += h1(`Unplanned Unavailability — Unscheduled stoppage (Operational Delay)  (${ua.length}건 · ${f(t.uaH,1)} h)`,7);
+  b += ua.length ? tbl(['Vessel','Date','Hours','Remark','Docmap'], ua.sort((x,y)=>x.u.date.localeCompare(y.u.date)).map(({c,u})=>[{t:c.e.matched,b:true},u.date,{t:`${f(u.hours,1)}${u.hours>=24?` (≥24h, ${f(u.hours/24,1)}d)`:''}`,b:u.hours>=24,color:u.hours>=24?DC.crit:DC.warn},u.remark+(u.kpi!=='Yes'?` [${u.kpi}]`:''),{t:u.docmap,size:8,color:DC.ink3}]),[1800,1000,1400,4100,1500],{zebra:true}) : para('승선 기간 중 Unscheduled stoppage 없음',{i:true,size:9.5,color:DC.ink3});
+  /* 8. LTI */
+  b += h1(`LTIF / LTSF (${lti.length})  —  WSMK KPI → Crew Data1`,8);
+  b += lti.length ? tbl(['Vessel','Date','Type','Rank','Description'], lti.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>[{t:c.e.matched,b:true},l.date,pill(l.type,'bad'),l.rank,l.desc]),[1800,1000,900,1000,5100],{zebra:true}) : para('승선 기간 중 LTI/LTS 없음',{i:true,size:9.5,color:DC.ink3});
+  b += note(`Sources: ${DATA.sources.psc} (Database) · ${DATA.sources.kpi} (Tech Data / Crew Data1) — indexed ${DATA.generated}`);
   return b;
 }
 const CRC_T = (()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
@@ -906,12 +983,15 @@ function zipStore(files){
 function exportDocx(list){
   list=(list||[]).filter(g=>g&&g.cards); if(!list.length){ alert('먼저 Performance 조회를 실행하세요.'); return; }
   const body = list.map((g,i)=>reportBody(g,i===0)).join('');
-  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const W_NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W_NS}><w:body>${body}<w:sectPr><w:footerReference w:type="default" r:id="rIdF"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1050" w:bottom="1000" w:left="1050" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${W_NS}><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:space="4" w:color="${DC.line}"/></w:pBdr><w:tabs><w:tab w:val="right" w:pos="9800"/></w:tabs><w:spacing w:before="0" w:after="0"/></w:pPr>${run('WSMK Crew Performance Report · Wilhelmsen Ship Management Korea · HSEQ · Confidential — 참고용 (Claude 생성)',{size:7.5,color:DC.ink3})}<w:r><w:rPr><w:sz w:val="15"/><w:color w:val="${DC.ink3}"/></w:rPr><w:tab/></w:r>${run('Page ',{size:7.5,color:DC.ink3})}<w:r><w:rPr><w:sz w:val="15"/><w:color w:val="${DC.ink3}"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="15"/><w:color w:val="${DC.ink3}"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r>${run(' / ',{size:7.5,color:DC.ink3})}<w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:instrText xml:space="preserve"> NUMPAGES </w:instrText></w:r><w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="15"/><w:color w:val="${DC.ink3}"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="15"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>`;
   const files=[
-    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'},
+    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>'},
     {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
-    {name:'word/_rels/document.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'},
+    {name:'word/_rels/document.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdF" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>'},
     {name:'word/document.xml',data:xml},
+    {name:'word/footer1.xml',data:footer},
   ];
   const blob=zipStore(files);
   const nm = list.length===1 ? (list[0].name||'crew').replace(/[^\w가-힣]+/g,'_') : `${list.length}명`;
