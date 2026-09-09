@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     ...body,
     periods: (body.periods || []).map(p => ({
       ...p,
-      psc: (p.psc || []).map(x => ({ ...x, items: (x.items || []).slice(0, 6).map(t => cut(t, 90)) })),
+      psc: (p.psc || []).map(x => ({ ...x, items: (x.items || []).slice(0, 5).map(t => cut(t, 80)) })),
       unscheduled_stoppage: (p.unscheduled_stoppage || []).map(u => ({ ...u, remark: cut(u.remark, 90) })),
       lti: (p.lti || []).map(l => ({ ...l, desc: cut(l.desc, 90) })),
     })),
@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: MODEL, max_tokens: 3000, system: SYSTEM,
+        model: MODEL, max_tokens: 8000, system: SYSTEM,
         messages: [
           { role: "user", content: "Seafarer performance data (JSON):\n" + JSON.stringify(slim) + "\n\n위 데이터로 appraisal JSON을 작성. 모든 문장은 반드시 한국어(보고서체)로 작성하고, 영어 문장은 쓰지 않는다. 직급(rank)과 각 사건의 성격(nature)을 기준으로 책임 영역을 구분하여 평가한다. 응답은 '{' 로 시작하는 JSON 객체 하나만 출력한다." + (extra || "") },
         ],
@@ -54,8 +54,12 @@ module.exports = async (req, res) => {
     });
     const out = await r.json();
     if (!r.ok) throw Object.assign(new Error(out.error?.message || "Claude API error"), { status: r.status });
-    return (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+    const txt = (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+    if (out.stop_reason === "max_tokens") throw Object.assign(new Error("truncated"), { truncated: true, text: txt });
+    return txt;
   };
+  const complete = (p) => p && typeof p.summary === "string" && p.summary.length > 40 && p.swot
+    && ["strengths", "weaknesses", "opportunities", "threats"].every(k => Array.isArray(p.swot[k]) && p.swot[k].length > 0);
   const parse = (text) => {
     const start = text.indexOf("{"); if (start < 0) throw new Error("no json");
     let t = text.slice(start).replace(/```[a-z]*\n?|```/g, "").trim();
@@ -74,17 +78,18 @@ module.exports = async (req, res) => {
   };
 
   let text = "", parsed = null, attempt = 0;
+  const tryOnce = async (extra) => {
+    try { text = await call(extra); } catch (e) { if (e.truncated) { text = e.text; return null; } throw e; }
+    try { const p = parse(text); return complete(p) ? p : null; } catch { return null; }
+  };
   try {
-    text = await call();
-    try { parsed = parse(text); }
-    catch {
-      attempt = 1;
-      text = await call("\n\n주의: 직전 응답이 유효한 JSON이 아니었다. 문장을 더 짧게 하여 반드시 완전한 JSON 하나만 출력한다.");
-      parsed = parse(text);
-    }
+    parsed = await tryOnce();
+    if (!parsed) { attempt = 1; parsed = await tryOnce("\n\n주의: 직전 응답이 잘리거나 불완전한 JSON이었다. summary는 4문장 이내, SWOT 각 항목 2개 이내로 더 짧게 작성하여 반드시 완전한 JSON 하나만 출력한다."); }
+    if (!parsed) { attempt = 2; parsed = await tryOnce("\n\n주의: 매우 짧게. summary 3문장, SWOT 각 항목 2개(각 60자 이내), recommendation 1문장. 완전한 JSON만 출력."); }
+    if (!parsed) throw new Error("incomplete");
   } catch (e) {
     if (e.status) return res.status(e.status).json({ error: e.message });
-    return res.status(422).json({ error: "모델 응답을 JSON으로 해석할 수 없습니다. 다시 생성을 눌러 주세요.", raw: cut(text, 500) });
+    return res.status(422).json({ error: "평가 JSON이 완전하게 생성되지 않았습니다. '다시 생성'을 눌러 주세요.", raw: cut(text, 500) });
   }
   res.status(200).json({ ...parsed, model: MODEL, ms: Date.now() - t0, retried: attempt });
 };
