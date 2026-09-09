@@ -61,6 +61,21 @@ header .meta{font-size:12px;opacity:.85;text-align:right}
 .tile .val.prev{font-size:16px;font-weight:600;color:var(--ink2)}
 .tile .crew{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink2);display:flex;justify-content:space-between}
 .tile .crew b{color:var(--ink);font-variant-numeric:tabular-nums}
+.tile .crew{display:block}
+.tile .crew .crewl{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;color:var(--ink2)}
+.tile .crew .raw{color:var(--ink3);font-size:11px;font-weight:400}
+.tile .val .raw{font-size:11px;color:var(--ink3);font-weight:400}
+.tile .crew .crewv{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-top:3px}
+.tile .crew .crewv b{font-size:18px;font-weight:700}
+.tile .crew .tag{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;white-space:nowrap}
+.tile.cmp.good{background:#eefaf1;border-color:#b7e4c4}
+.tile.cmp.good .crew .crewv b{color:var(--good)} .tile.cmp.good .tag{background:#cdeed8;color:var(--good)}
+.tile.cmp.bad{background:#fdf0ef;border-color:#f1b8b3}
+.tile.cmp.bad .crew .crewv b{color:var(--crit)} .tile.cmp.bad .tag{background:#f7d0cc;color:var(--crit)}
+.tile.cmp.even .tag{background:#eef1f5;color:var(--ink2)}
+.legend{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--ink3);margin:8px 2px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+.legend i.g{background:#eefaf1;border-color:#b7e4c4} .legend i.r{background:#fdf0ef;border-color:#f1b8b3}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:860px){.grid2{grid-template-columns:1fr}}
 /* dropzone */
@@ -200,6 +215,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
       </div>
     </div>
     <div class="tiles" id="tiles"></div>
+    <div class="legend hidden" id="tileLegend"><span><i class="g"></i>이 선원이 당해년도(YTD) Fleet average보다 우수</span><span><i class="r"></i>Fleet average보다 저조</span><span>연환산 = 승선기간 합계 ÷ (승선일수/365) → 한 척·1년 기준으로 환산해 비교</span></div>
     <div class="card assess hidden" id="assess">
       <div class="hd"><h2>Performance Assessment</h2><span class="hint">Best shipping practice 기준 · 승선기간 선박 실적 vs Fleet average</span>
         <span style="flex:1"></span><span class="status" id="assessStatus"></span><button class="btn sm" id="assessBtn">다시 생성</button><button class="btn sm" id="docxBtn2" title="Word 다운로드">📄 Word</button></div>
@@ -316,21 +332,31 @@ let CREW_TOTALS = null;
 function renderTiles(){
   const n1 = Math.max(1, +$('#fleetNow').value||1), n0 = Math.max(1, +$('#fleetPrev').value||1);
   const a = yearStats(String(Y)), b = yearStats(String(PY));
-  const c = CREW_TOTALS;
+  const c = CREW_TOTALS; const yrs = c ? Math.max(c.days||0, 1)/365 : 0;   // vessel-years on board → 연환산
+  // better: 'low' = lower is better, 'high' = higher is better, null = neutral
   const tiles = [
-    {lbl:'PSC Inspections', unit:'/ vessel', now:a.insp/n1, prev:b.insp/n0, crew:c&&`${c.insp} insp.`},
-    {lbl:'PSC Deficiencies', unit:'/ vessel', now:a.defs/n1, prev:b.defs/n0, crew:c&&`${c.defs} def.`},
-    {lbl:'Deficiency-free rate', unit:'% of inspections', now:a.insp?100*a.clean/a.insp:null, prev:b.insp?100*b.clean/b.insp:null, crew:c&&(c.insp?`${fmtN(100*c.clean/c.insp,0)} %`:'–'), d:0},
-    {lbl:'PSC Detentions', unit:'fleet total', now:a.det, prev:b.det, crew:c&&`${c.det}`, d:0},
-    {lbl:'Unplanned Unavailability', unit:'hours / vessel', now:a.uaH/n1, prev:b.uaH/n0, crew:c&&`${fmtN(c.uaH,1)} h (${c.uaN})`},
-    {lbl:'LTIF', unit:'count (fleet)', now:a.lti, prev:b.lti, crew:c&&`${c.lti}`, d:0},
+    {lbl:'PSC Inspections', unit:'/ vessel · yr', now:a.insp/n1, prev:b.insp/n0, crew:c&&c.insp/yrs, raw:c&&`${c.insp} insp.`, better:null},
+    {lbl:'PSC Deficiencies', unit:'/ vessel · yr', now:a.defs/n1, prev:b.defs/n0, crew:c&&c.defs/yrs, raw:c&&`${c.defs} def.`, better:'low'},
+    {lbl:'Deficiency-free rate', unit:'% of inspections', now:a.insp?100*a.clean/a.insp:null, prev:b.insp?100*b.clean/b.insp:null, crew:c&&(c.insp?100*c.clean/c.insp:null), raw:c&&`${c.clean}/${c.insp}`, better:'high', d:0, pct:true},
+    {lbl:'PSC Detentions', unit:'fleet total (per vessel)', now:a.det/n1, prev:b.det/n0, crew:c&&c.det/yrs, raw:c&&`${c.det} det.`, better:'low', fleetRaw:[a.det,b.det]},
+    {lbl:'Unplanned Unavailability', unit:'hours / vessel · yr', now:a.uaH/n1, prev:b.uaH/n0, crew:c&&c.uaH/yrs, raw:c&&`${fmtN(c.uaH,1)} h (${c.uaN})`, better:'low', d:1},
+    {lbl:'LTIF', unit:'count (per vessel)', now:a.lti/n1, prev:b.lti/n0, crew:c&&c.lti/yrs, raw:c&&`${c.lti} LTI`, better:'low', fleetRaw:[a.lti,b.lti]},
   ];
-  $('#tiles').innerHTML = tiles.map(t=>`
-    <div class="tile"><div class="lbl">${t.lbl}<span class="unit">${t.unit}</span></div>
-      <div class="rows"><span class="yr">${Y} YTD</span><span class="val">${fmtN(t.now,t.d??2)}</span>
-      <span class="yr">${PY}</span><span class="val prev">${fmtN(t.prev,t.d??2)}</span></div>
-      ${c?`<div class="crew"><span>이 선원 (승선기간 합계)</span><b>${t.crew}</b></div>`:''}
-    </div>`).join('');
+  const judge = t => {
+    if (!c || t.better==null || t.crew==null || t.now==null) return {cls:'', txt:''};
+    const diff = t.crew - t.now; const tol = Math.abs(t.now)*0.05;
+    if (Math.abs(diff) <= tol) return {cls:'even', txt:'≈ 평균'};
+    const good = t.better==='low' ? diff<0 : diff>0;
+    return {cls: good?'good':'bad', txt: good?'▲ 평균보다 우수':'▼ 평균보다 저조'};
+  };
+  $('#tiles').innerHTML = tiles.map(t=>{ const j=judge(t); return `
+    <div class="tile ${c?('cmp '+j.cls):''}"><div class="lbl">${t.lbl}<span class="unit">${t.unit}</span></div>
+      <div class="rows"><span class="yr">${Y} YTD</span><span class="val">${t.fleetRaw?`${t.fleetRaw[0]}건 <span class="raw">(${fmtN(t.now,2)}/vsl)</span>`:fmtN(t.now,t.d??2)+(t.pct?' %':'')}</span>
+      <span class="yr">${PY}</span><span class="val prev">${t.fleetRaw?`${t.fleetRaw[1]}건 <span class="raw">(${fmtN(t.prev,2)}/vsl)</span>`:fmtN(t.prev,t.d??2)+(t.pct?' %':'')}</span></div>
+      ${c?`<div class="crew ${j.cls}"><div class="crewl"><span>이 선원${t.pct?'':' (연환산)'}</span><span class="raw">${t.raw}${t.pct?'':' · '+fmtN(yrs,2)+' vsl·yr'}</span></div>
+           <div class="crewv"><b>${t.crew==null?'–':fmtN(t.crew,t.d??2)+(t.pct?' %':'')}</b>${j.txt?`<span class="tag">${j.txt}</span>`:''}</div></div>`:''}
+    </div>`;}).join('');
+  $('#tileLegend').classList.toggle('hidden', !c);
 }
 
 /* ---------------- image handling ---------------- */
@@ -429,6 +455,7 @@ function runPerformance(){
     Object.keys(tot).forEach(k=>tot[k]+=s[k]);
     return {e,a,b,days,psc,ua,lti,s};
   });
+  tot.days = cards.reduce((x,c)=>x+c.days,0);
   CREW_TOTALS = tot; renderTiles();
 
   DATA.psc.forEach(p=>{ if(p.code30==null) p.code30 = p.deficiencies.filter(d=>/\b30\b/.test(d.code)).length; });
