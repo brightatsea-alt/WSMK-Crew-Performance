@@ -509,13 +509,10 @@ function renderGroups(){
   box.innerHTML = REPORTS.map((g,gi)=>`<div class="group" data-g="${g.id}">
     <div class="gh"><span class="idx" style="background:var(--brand);color:#fff;font-weight:700;border-radius:6px;padding:1px 8px;font-size:12px">${gi+1}</span>
       <input class="gn" data-gk="name" value="${esc(g.name)}" placeholder="선원 이름"><input class="gr" data-gk="rank" value="${esc(g.rank)}" placeholder="직급">
-      <span class="remark">${g.entries.filter(e=>!isLeave(e)).length}개 승선기간${leaveCount(g)?` · <span style="color:var(--warn)">미승선 ${leaveCount(g)}건 (${leaveDays(g)}일, 분석 제외 — ON BOARD 행만 반영)</span>`:''}</span><span style="flex:1"></span>
+      <span class="remark">${g.entries.filter(e=>!isLeave(e)).length}개 승선기간 (ON BOARD 행만)</span><span style="flex:1"></span>
       <button class="btn sm" data-add="${g.id}">+ 행</button><button class="btn sm" data-del="${g.id}" title="이 선원 제거">✕</button></div>
     <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Start Date (sign on)</th><th>End Date (sign off)</th><th></th></tr></thead>
-    <tbody>${g.entries.map((e,i)=>isLeave(e)?`<tr class="leave" style="background:var(--warn-soft);color:var(--ink2)">
-      <td><span class="pill warn">${/LEAVE|VACATION|HOLIDAY/i.test(e.reason||e.vessel)?'🏖 휴가':'⏸ 미승선'}</span> <b>${esc(e.reason||e.vessel||'NOT ON BOARD')}</b>${e.vessel && e.vessel!==e.reason?`<div class="remark">${esc(e.vessel)}</div>`:''}<div class="remark" style="margin-top:3px">Type/Status에 'On Board'가 없으므로 승선기간·성과 분석에서 제외됩니다</div></td>
-      <td>${esc(e.rank||'')}</td><td class="num">${esc(e.sign_on)}</td><td class="num">${esc(e.sign_off||'')}</td>
-      <td><button class="btn sm" data-rm="${i}" title="삭제">✕</button></td></tr>`:`<tr>
+    <tbody>${g.entries.map((e,i)=>isLeave(e)?``:`<tr>
       <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
       <td><input data-i="${i}" data-k="rank" value="${esc(e.rank)}" placeholder="Rank"></td>
       <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${e.sign_on?'':'bad'}"></td>
@@ -591,7 +588,7 @@ function renderResults(){
 function renderWho(g){
   const lc=latestCard(g); const rank=lc?.e.rank||g.rank||''; const name=g.name||'조회 선원';
   $(`#who-${g.id}`).innerHTML = `<div class="avatar">${esc(name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?')}</div>
-    <div class="whoinfo"><div class="name">${esc(name)}</div><div class="meta">${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${g.cards.length}개 승선기간 · ${g.tot.days}일${leaveCount(g)?` · <span title="ON BOARD 행만 승선기간으로 반영 — EARNED LEAVE UNPAID 등 휴가·미승선 기간은 승선일수·연환산·평가에서 제외">미승선(휴가 등) ${leaveCount(g)}건 ${leaveDays(g)}일 제외</span>`:''}</div></div>
+    <div class="whoinfo"><div class="name">${esc(name)}</div><div class="meta">${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${g.cards.length}개 승선기간 · ${g.tot.days}일</div></div>
     <div class="whoright"><button class="btn primary sm" data-docx2="${g.id}" title="이 선원 보고서를 Word(.docx)로 다운로드">📄 Word 다운로드</button></div>`;
   $(`#who-${g.id} [data-docx2]`).onclick=()=>exportDocx([g]);
 }
@@ -766,7 +763,7 @@ function reportBody(g, first){
   b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40,pageBreak:!first});
   b += para(`Wilhelmsen Ship Management Korea · HSEQ · 생성일 ${today.toISOString().slice(0,10)}`,{size:9,color:'64748B',after:160});
   b += h1('1. 선원 정보');
-  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${g.cards.length}개 · 총 ${t.days}일`]].concat(leaveCount(g)?[['미승선 기간 (제외)',`${leaveCount(g)}건 · ${leaveDays(g)}일 (${g.entries.filter(isLeave).map(e=>`${e.reason||e.vessel||'NOT ON BOARD'} ${e.sign_on}~${e.sign_off||''}`).join(', ')}) — ON BOARD 행만 승선기간으로 반영`]]:[]),[2400,7200]);
+  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${g.cards.length}개 · 총 ${t.days}일`]],[2400,7200]);
   b += h1('2. Fleet Average per Vessel vs 본인 실적 (연환산)');
   const yrs=Math.max(t.days,1)/365;
   b += table(['지표',`${Y} YTD (척당)`,`${PY} (척당)`,'본인 합계','본인 연환산 (척·년)','판정'],[
