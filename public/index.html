@@ -207,6 +207,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .ssmm .cl{font-size:12px;color:var(--ink3)}
 .ssmm .why{font-size:13px;color:var(--ink2);margin:2px 0 4px}
 .ssmm ul{margin:0;padding-left:18px;font-size:13px}
+.qitem .qerr{font-size:10.5px;color:var(--crit);background:var(--crit-soft);padding:2px 4px;border-radius:4px;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ssmm.eng{border-left-color:var(--warn)}
 .ssmm.engrec{border-left-color:var(--good)}
 .ssmm.engchart{border-left-color:#f59e0b}
@@ -438,7 +439,7 @@ async function addFiles(files){
   renderQueue(); $('#exStatus').textContent = `${QUEUE.length}장 준비됨`;
 }
 function renderQueue(){
-  $('#queue').innerHTML = QUEUE.map((q,i)=>`<div class="qitem ${q.status}" title="${esc(q.label)}"><img src="${q.thumb}"><span class="qs">${i+1}${q.status==='done'?' ✓':q.status==='err'?' ✗':q.status==='busy'?' …':''}</span><button class="qx" data-x="${q.id}" title="제거">✕</button><div class="ql">${esc(q.seafarer||q.label)}</div></div>`).join('');
+  $('#queue').innerHTML = QUEUE.map((q,i)=>`<div class="qitem ${q.status}" title="${esc(q.label)}"><img src="${q.thumb}"><span class="qs">${i+1}${q.status==='done'?' ✓':q.status==='err'?' ✗':q.status==='busy'?' …':''}</span><button class="qx" data-x="${q.id}" title="제거">✕</button><div class="ql">${esc(q.seafarer||q.label)}</div>${q.status==='err'&&q.error?`<div class="qerr" title="${esc(q.error)}">⚠ ${esc(q.error)}</div>`:''}</div>`).join('');
   $('#queue').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ QUEUE=QUEUE.filter(q=>q.id!==b.dataset.x); renderQueue(); });
   $('#dropText').classList.toggle('hidden', QUEUE.length>0); $('#moreHint').classList.toggle('hidden', QUEUE.length===0); drop.style.minHeight = QUEUE.length? '70px':'190px';
   $('#analyzeBtn').disabled = !QUEUE.some(q=>q.status!=='done');
@@ -471,7 +472,8 @@ $('#analyzeBtn').onclick = async () => {
     renderQueue(); renderGroups();
   }
   btn.disabled=false; btn.textContent='승선기간 분석 (Claude)';
-  $('#exStatus').textContent = `${done}장 추출 완료${fail?` · ${fail}장 실패`:''} · 선원 ${REPORTS.length}명`; $('#exStatus').className = fail?'status err':'status';
+  const firstErr = QUEUE.find(q=>q.status==='err'&&q.error);
+  $('#exStatus').textContent = `${done}장 추출 완료${fail?` · ${fail}장 실패${firstErr?` — ${firstErr.error}`:''}`:''} · 선원 ${REPORTS.length}명`; $('#exStatus').className = fail?'status err':'status';
   if (REPORTS.some(r=>r.entries.length)) runAll();
 };
 function mergeIntoGroups(q){
