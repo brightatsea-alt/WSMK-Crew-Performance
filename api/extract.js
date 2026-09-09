@@ -32,7 +32,6 @@ module.exports = async (req, res) => {
   const payload = {
     model: MODEL,
     max_tokens: 2000,
-    temperature: 0,
     system: SYSTEM,
     messages: [{
       role: "user",
