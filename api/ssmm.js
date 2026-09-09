@@ -72,23 +72,53 @@ module.exports = async (req, res) => {
     ssmm_extracts: extracts, ssmm_table_of_contents: toc };
 
   const t0 = Date.now();
-  let r;
+  const call = async (extra) => {
+    let r;
+    try {
+      r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({ model: MODEL, max_tokens: 8000, system: SYSTEM,
+          messages: [{ role: "user", content: [{ type: "text", text: "Data:\n" + JSON.stringify(user) + "\n\nReturn the JSON now." + (extra || "") }] }] }),
+      });
+    } catch (e) { throw Object.assign(new Error("Claude API 연결 실패: " + e.message), { status: 502 }); }
+    const out = await r.json();
+    if (!r.ok) throw Object.assign(new Error(out.error?.message || "Claude API error"), { status: r.status });
+    return { text: (out.content || []).filter(c => c.type === "text").map(c => c.text).join(""), truncated: out.stop_reason === "max_tokens" };
+  };
+  // parse, repairing a truncated JSON (close open strings / arrays / objects) if needed
+  const parse = (text) => {
+    const start = text.indexOf("{"); if (start < 0) throw new Error("no json");
+    let t = text.slice(start).replace(/```[a-z]*\n?|```/g, "").trim();
+    const end = t.lastIndexOf("}"); if (end > 0) t = t.slice(0, end + 1);
+    try { return JSON.parse(t); } catch {}
+    let s2 = t, inStr = false, esc = false, stack = [];
+    for (const ch of s2) {
+      if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
+      if (ch === '"') inStr = true; else if (ch === "{" || ch === "[") stack.push(ch); else if (ch === "}" || ch === "]") stack.pop();
+    }
+    if (inStr) s2 += '"';
+    s2 = s2.replace(/,\s*$/, "");
+    while (stack.length) { const o = stack.pop(); s2 += o === "{" ? "}" : "]"; }
+    return JSON.parse(s2);
+  };
+  const ok = (p) => p && Array.isArray(p.focus) && p.focus.length > 0 && p.focus.every(f => f && f.section);
+
+  let text = "", parsed = null, retried = 0;
   try {
-    r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: SYSTEM,
-        messages: [{ role: "user", content: [{ type: "text", text: "Data:\n" + JSON.stringify(user) + "\n\nReturn the JSON now." }] }] }),
-    });
-  } catch (e) { return res.status(502).json({ error: "Claude API 연결 실패: " + e.message }); }
-  const out = await r.json();
-  if (!r.ok) return res.status(r.status).json({ error: out.error?.message || "Claude API error" });
-  const text = (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
-  let parsed = null;
-  try { const s = text.indexOf("{"), e = text.lastIndexOf("}"); parsed = JSON.parse(text.slice(s, e + 1)); } catch {}
-  if (!parsed || !Array.isArray(parsed.focus)) return res.status(422).json({ error: "SSMM 제안 JSON을 해석할 수 없습니다.", raw: cut(text, 400) });
+    let a = await call();
+    text = a.text;
+    try { const p = parse(text); if (ok(p)) parsed = p; } catch {}
+    if (!parsed || a.truncated) {
+      // retry once, shorter: complete JSON is more important than length
+      retried = 1;
+      a = await call("\n\n주의: 직전 응답이 잘리거나 불완전한 JSON이었다. focus 항목은 4개 이내, 각 why 는 2문장 이내, actions 는 3개 이내(각 60자 이내)로 더 짧게 작성하여 반드시 완전한 JSON 하나만 출력한다.");
+      try { const p = parse(a.text); if (ok(p)) { parsed = p; text = a.text; } } catch {}
+    }
+  } catch (e) { return res.status(e.status || 500).json({ error: e.message }); }
+  if (!parsed) return res.status(422).json({ error: "SSMM 제안 JSON을 해석할 수 없습니다.", raw: cut(text, 400) });
   // keep only sections that exist in the index; attach titles
   const known = new Map(SSMM.chapters.map(c => [c.section, c.title]));
   parsed.focus = parsed.focus.filter(f => f && known.has(String(f.section))).map(f => ({ ...f, section: String(f.section), title: f.title || known.get(String(f.section)) }));
-  res.status(200).json({ ...parsed, model: MODEL, ms: Date.now() - t0, chapters_considered: chapters.map(c => c.section), source: SSMM.source });
+  res.status(200).json({ ...parsed, model: MODEL, ms: Date.now() - t0, retried, chapters_considered: chapters.map(c => c.section), source: SSMM.source });
 };
