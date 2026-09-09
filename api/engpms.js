@@ -19,9 +19,10 @@ Rules:
 - For each stoppage / breakdown, propose the PMS job that would have detected it earlier (condition monitoring, overhaul interval, spare parts, alarm test) and the supplementary inspection to prevent recurrence.
 - 5 to 6 items ordered by priority, each field concise (check / pms / link ≤ 2 sentences and ≤120 Korean characters, basis ≤ 60 characters). Total output must stay short. For each: system (e.g. "M/E", "Aux. engine / generator", "Boiler & steam", "Fuel oil treatment", "OWS / bilge / MARPOL", "Fire & safety equipment", "Steering gear", "Electrical & automation", "Cargo / ramp hydraulics (PCTC)", "Cargo handling & GCU (LNG)"), the specific equipment, what to check (concrete, measurable), how to reflect it in PMS (job name / interval / record), the best-practice basis (name the standard/element/questionnaire item), the link to SWOT/event, and priority 상/중/하.
 - Do not invent vessel-specific makers or part numbers; keep to generic but concrete engineering checks. Where you refer to SSMM, use only the section/clause numbers in the extracts provided.
-- LANGUAGE: check / pms / basis / link / overall in Korean 보고서체 (~함/~할 것/~필요). Technical terms and standard names stay English (TMSA, RISQ, SIRE, OWS, ODME, PMS, M/E, A/E, LOTO, UMS).
+- LANGUAGE: check / pms / basis / link / overall / recommendation in Korean 보고서체 (~함/~할 것/~필요). Technical terms and standard names stay English (TMSA, RISQ, SIRE, OWS, ODME, PMS, M/E, A/E, LOTO, UMS).
+- ENGINEER RECOMMENDATION (separate from the items): a guidance block addressed to this engineer for the next contract, derived from the Unplanned Unavailability records and the engine-related PSC deficiencies: "headline" (1 sentence, the single most important message), "guidance" = 3–5 topics, each {"topic": short title (e.g. "M/E 신뢰성 / Unplanned Unavailability 예방", "PSC 기관실 대비", "MARPOL 기록·OWS", "기관부 안전관리·LOTO"), "guide": 2–3 sentences of practical guidance (what to do before joining, in the first 2 weeks on board, and routinely), "ref": the event or PSC deficiency it answers}. If there is no UA or engine-related PSC record, say so and give standard best-practice guidance for the rank and vessel type.
 Return ONLY this JSON, no prose:
-{"items":[{"system":"M/E","equipment":"...","check":"...","pms":"...","basis":"TMSA 3 El.4 KPI 4.2 / RISQ 8.x","link":"...","priority":"상"}],"overall":"<2–3 sentence Korean wrap-up on how to prioritise these checks and record them (PMS, handover note, SMR)>"}`;
+{"recommendation":{"headline":"...","guidance":[{"topic":"...","guide":"...","ref":"..."}]},"items":[{"system":"M/E","equipment":"...","check":"...","pms":"...","basis":"TMSA 3 El.4 KPI 4.2 / RISQ 8.x","link":"...","priority":"상"}],"overall":"<2–3 sentence Korean wrap-up on how to prioritise these checks and record them (PMS, handover note, SMR)>"}`;
 
 module.exports = async (req, res) => {
   if (!requireAuth(req, res)) return;
@@ -80,11 +81,13 @@ module.exports = async (req, res) => {
     try { const p = parse(text); if (ok(p)) parsed = p; } catch {}
     if (!parsed || a.truncated) {
       retried = 1;
-      a = await call("\n\n주의: 직전 응답이 잘리거나 불완전한 JSON이었다. items 5개 이내, 각 필드 2문장(80자) 이내로 더 짧게 작성하여 반드시 완전한 JSON 하나만 출력한다.");
+      a = await call("\n\n주의: 직전 응답이 잘리거나 불완전한 JSON이었다. items 5개 이내·guidance 3개 이내, 각 필드 2문장(80자) 이내로 더 짧게 작성하여 반드시 완전한 JSON 하나만 출력한다.");
       try { const p = parse(a.text); if (ok(p)) { parsed = p; text = a.text; } } catch {}
     }
   } catch (e) { return res.status(e.status || 500).json({ error: e.message }); }
   if (!parsed) return res.status(422).json({ error: "PMS 보완점검 JSON을 해석할 수 없습니다.", raw: cut(text, 400) });
+  const rec = parsed.recommendation && typeof parsed.recommendation === "object" ? parsed.recommendation : {};
+  parsed.recommendation = { headline: String(rec.headline || ""), guidance: Array.isArray(rec.guidance) ? rec.guidance.filter(x => x && (x.guide || x.topic)).slice(0, 6).map(x => ({ topic: String(x.topic || ""), guide: String(x.guide || ""), ref: String(x.ref || "") })) : [] };
   parsed.items = parsed.items.map(i => ({ system: String(i.system || ""), equipment: String(i.equipment || ""), check: String(i.check || ""), pms: String(i.pms || ""), basis: String(i.basis || ""), link: String(i.link || ""), priority: /상|high/i.test(i.priority) ? "상" : /하|low/i.test(i.priority) ? "하" : "중" }));
   res.status(200).json({ ...parsed, model: MODEL, ms: Date.now() - t0, retried, engineer: true, ssmm_sections: secs });
 };
