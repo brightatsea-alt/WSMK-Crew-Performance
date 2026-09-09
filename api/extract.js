@@ -9,12 +9,13 @@ const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-4-5";
 const SYSTEM = `You read screenshots of a seafarer's sea-service record (승선 이력 / crew career table) from a ship-management crewing system.
 Extract every row that describes a period on board a vessel.
 Return ONLY a JSON object of this shape, no prose:
-{"seafarer": "<seafarer name if visible, else null>", "rank": "<seafarer's current/latest rank if shown in a header (e.g. Master, C/E), else null>", "entries":[{"vessel":"<vessel name as written>","rank":"<rank if visible, else null>","sign_on":"YYYY-MM-DD","sign_off":"YYYY-MM-DD or null if still on board / blank"}]}
+{"seafarer": "<seafarer name if visible, else null>", "rank": "<seafarer's current/latest rank if shown in a header (e.g. Master, C/E), else null>", "entries":[{"vessel":"<vessel name as written>","rank":"<rank if visible, else null>","status":"<the row's status / type text exactly as written, e.g. ON BOARD, EARNED LEAVE UNPAID; null if the table has no such column>","on_board":true|false,"sign_on":"YYYY-MM-DD","sign_off":"YYYY-MM-DD or null if still on board / blank"}]}
 Rules:
 - Dates may appear as DD/MM/YYYY, YYYY.MM.DD, DD-MMM-YY, etc. Convert to ISO YYYY-MM-DD. If the day is missing, use 01. If a year is 2 digits, assume 20xx.
 - If a row shows only one date or the sign-off is blank / "present" / "~", set sign_off to null.
 - Keep vessel names exactly as written (do not translate). Ignore leading "M/V", "MV".
-- Ignore rows that are not vessel service (training, leave, office).
+- ON BOARD rule: only rows whose status/type is "ON BOARD" (on board a vessel) are sea service → "on_board": true. Every other row — "EARNED LEAVE UNPAID", "EARNED LEAVE", "LEAVE", "VACATION", "STANDBY", "TRAINING", "MEDICAL", etc. — is NOT sea service → "on_board": false, but still output it with its dates and "status" as written (set "vessel" to the vessel name if one is shown, otherwise to the status text). If the table has no status column, every vessel row is on_board: true unless the vessel/remark text itself says leave.
+- Never skip a leave/off row: it is needed to show the excluded period.
 - Sort by sign_on ascending.
 Known fleet vessel names (use to correct OCR mistakes when the match is obvious): ${data.vessels.join(", ")}`;
 
@@ -73,6 +74,8 @@ module.exports = async (req, res) => {
     rank: e.rank || null,
     sign_on: e.sign_on,
     sign_off: e.sign_off || null,
+    status: e.status ? String(e.status).trim() : null,
+    on_board: !(e.on_board === false || e.leave === true || (e.status && !/^\s*(ON\s*-?\s*BOARD|ONBOARD)\s*$/i.test(String(e.status))) || /\b(EARNED\s+LEAVE|LEAVE|UNPAID|VACATION|HOLIDAY)\b/i.test(String(e.vessel || "") + " " + String(e.rank || ""))),
   }));
   res.status(200).json({
     seafarer: parsed.seafarer || null,
