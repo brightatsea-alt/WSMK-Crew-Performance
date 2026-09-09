@@ -117,6 +117,14 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .mouitem .g{color:var(--good)} .mouitem .mb i.g{background:var(--good)}
 .mouitem .w{color:var(--warn)} .mouitem .mb i.w{background:var(--warn)}
 .mouitem .c{color:var(--crit)} .mouitem .mb i.c{background:var(--crit)}
+.who{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#0b3d6b,#12579a);color:#fff;border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.who .avatar{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;font-weight:800;font-size:18px;letter-spacing:.5px;flex:0 0 auto}
+.who .name{font-size:18px;font-weight:700;letter-spacing:.2px}
+.who .meta{font-size:12.5px;opacity:.9;margin-top:2px}
+.who .meta b{font-weight:600;background:rgba(255,255,255,.16);padding:1px 8px;border-radius:999px;margin-right:6px}
+.who .whoright{margin-left:auto;display:flex;gap:8px;align-items:center}
+.who .btn.primary{background:#fff;color:var(--brand);border-color:#fff}
+.who .btn.primary:hover{background:#e6eef7}
 .assess{margin-top:14px}
 .assess .verdict{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .assess .verdict .who{font-weight:700;font-size:15px}
@@ -181,10 +189,21 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
       <label style="font-size:12px;color:var(--ink2)">선박 수 (당해년도) <input id="fleetNow" type="number" min="1" style="width:64px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px"></label>
       <label style="font-size:12px;color:var(--ink2)">(전년도) <input id="fleetPrev" type="number" min="1" style="width:64px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px"></label>
     </div>
+    <div class="who hidden" id="who">
+      <div class="avatar" id="whoAvatar">?</div>
+      <div class="whoinfo">
+        <div class="name" id="whoName"></div>
+        <div class="meta" id="whoMeta"></div>
+      </div>
+      <div class="whoright">
+        <button class="btn primary sm" id="docxBtn" title="전체 보고서를 Word(.docx)로 다운로드">📄 Word 다운로드</button>
+      </div>
+    </div>
     <div class="tiles" id="tiles"></div>
     <div class="card assess hidden" id="assess">
       <div class="hd"><h2>Performance Assessment</h2><span class="hint">Best shipping practice 기준 · 승선기간 선박 실적 vs Fleet average</span>
-        <span style="flex:1"></span><span class="status" id="assessStatus"></span><button class="btn sm" id="assessBtn">다시 생성</button></div>
+        <span style="flex:1"></span><span class="status" id="assessStatus"></span><button class="btn sm" id="assessBtn">다시 생성</button><button class="btn sm" id="docxBtn2" title="Word 다운로드">📄 Word</button></div>
+
       <div class="bd" id="assessBody"></div>
     </div>
   </section>
@@ -239,7 +258,7 @@ let TOKEN = sessionStorage.getItem('wsmk_token') || null;
 let DATA = null;           // index.json
 let IMG = null;            // {b64, type}
 let ENTRIES = [];          // [{vessel, matched, rank, sign_on, sign_off}]
-let SEAFARER = null;
+let SEAFARER = null, SEAFARER_RANK = null, LAST_ASSESS = null;
 const $ = s => document.querySelector(s);
 const fmtN = (v, d=1) => (v==null||isNaN(v)) ? '–' : Number(v).toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0});
 const fmtH = h => h>=24 ? `${fmtN(h,1)} h <span class="remark">(${fmtN(h/24,1)} d)</span>` : `${fmtN(h,1)} h`;
@@ -349,7 +368,7 @@ $('#analyzeBtn').onclick = async () => {
   $('#exStatus').textContent=''; $('#exStatus').className='status';
   try {
     const j = await api('/api/extract',{method:'POST',body:JSON.stringify({image:IMG.b64, media_type:IMG.type})});
-    SEAFARER = j.seafarer;
+    SEAFARER = j.seafarer; SEAFARER_RANK = j.rank || null;
     ENTRIES = j.entries.map(e=>({vessel:e.vessel, matched:matchVessel(e.vessel), rank:e.rank||'', sign_on:e.sign_on||'', sign_off:e.sign_off||''}));
     $('#exStatus').textContent = `${ENTRIES.length}건 추출 · ${j.model} · ${(j.ms/1000).toFixed(1)}s`;
     renderEntries();
@@ -451,13 +470,14 @@ function runPerformance(){
       <tbody>${ltiRows.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>`<tr>${vcell(c)}<td class="num">${l.date}</td><td><span class="pill ${l.type==='LTIF'?'crit':'neutral'}">${esc(l.type)}</span></td><td>${esc(l.rank)}</td><td>${esc(l.desc)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="sec none">승선 기간 중 LTI/LTS 없음</div>'}</div>`;
 
   $('#results').innerHTML = periodsHtml + pscHtml + uaHtml + ltiHtml + (cards.some(c=>c.a < '2014-01-01')?'<div class="notice">PSC 데이터는 2014년, KPI 데이터는 2016년부터 색인되어 있어 그 이전 승선기간은 실적이 표시되지 않습니다.</div>':'');
-  LAST_CARDS = cards; LAST_TOT = tot;
+  LAST_CARDS = cards; LAST_TOT = tot; LAST_ASSESS = null;
+  renderWho();
   runAssessment();
   $('#results').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 /* ---------------- AI assessment (summary + SWOT) ---------------- */
-let LAST_CARDS=null, LAST_TOT=null;
+let LAST_CARDS=null, LAST_TOT=null, LAST_PAYLOAD=null;
 $('#assessBtn').onclick = () => runAssessment();
 async function runAssessment(){
   if (!LAST_CARDS) return;
@@ -484,6 +504,7 @@ async function runAssessment(){
   };
   try {
     const j = await api('/api/assess',{method:'POST',body:JSON.stringify(payload)});
+    LAST_ASSESS = j; LAST_PAYLOAD = payload;
     const cls = /above/i.test(j.rating)?'good':/below/i.test(j.rating)?'crit':'neutral';
     const li = a => (a||[]).map(x=>`<li>${esc(x)}</li>`).join('') || '<li class="remark">–</li>';
     $('#assessBody').innerHTML = `
@@ -502,6 +523,111 @@ async function runAssessment(){
   } catch(err){
     $('#assessBody').innerHTML=''; $('#assessStatus').textContent = err.message; $('#assessStatus').className='status err';
   }
+}
+
+/* ---------------- seafarer banner ---------------- */
+function latestCard(){ if(!LAST_CARDS||!LAST_CARDS.length) return null; return LAST_CARDS.slice().sort((a,b)=>b.a.localeCompare(a.a))[0]; }
+function renderWho(){
+  const box=$('#who'); if(!LAST_CARDS||!LAST_CARDS.length){box.classList.add('hidden');return;}
+  const lc = latestCard();
+  const rank = lc.e.rank || SEAFARER_RANK || '';
+  const name = SEAFARER || '조회 선원';
+  $('#whoName').textContent = name;
+  $('#whoAvatar').textContent = name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
+  $('#whoMeta').innerHTML = `${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${LAST_CARDS.length}개 승선기간 · ${LAST_CARDS.reduce((x,c)=>x+c.days,0)}일`;
+  box.classList.remove('hidden');
+}
+
+/* ---------------- Word (.docx) export — no external library ---------------- */
+$('#docxBtn').onclick = $('#docxBtn2').onclick = () => exportDocx();
+const X = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function run(t,o={}){ return `<w:r><w:rPr>${o.b?'<w:b/>':''}${o.i?'<w:i/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}<w:sz w:val="${(o.size||10)*2}"/><w:rFonts w:ascii="Malgun Gothic" w:hAnsi="Malgun Gothic" w:eastAsia="Malgun Gothic"/></w:rPr><w:t xml:space="preserve">${X(t)}</w:t></w:r>`; }
+function para(t,o={}){ const runs = Array.isArray(t)? t.map(r=>run(r.t,r)).join('') : run(t,o); return `<w:p><w:pPr>${o.style?`<w:pStyle w:val="${o.style}"/>`:''}<w:spacing w:before="${o.before??60}" w:after="${o.after??60}"/>${o.align?`<w:jc w:val="${o.align}"/>`:''}${o.shade?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>`:''}</w:pPr>${runs}</w:p>`; }
+function h1(t){ return para(t,{b:true,size:16,color:'0B3D6B',before:240,after:80}); }
+function h2(t){ return para(t,{b:true,size:12.5,color:'12579A',before:200,after:60}); }
+function bullet(t){ return `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/><w:ind w:left="360" w:hanging="200"/></w:pPr>${run('• '+t,{size:10})}</w:p>`; }
+function table(header, rows, widths){
+  const total = 9600; const w = widths || header.map(()=>Math.floor(total/header.length));
+  const cell=(t,i,hdr)=>`<w:tc><w:tcPr><w:tcW w:w="${w[i]}" w:type="dxa"/>${hdr?'<w:shd w:val="clear" w:color="auto" w:fill="E6EEF7"/>':''}</w:tcPr>${para(t,{b:hdr,size:hdr?9:9.5,before:30,after:30})}</w:tc>`;
+  const tr=(cells,hdr)=>`<w:tr>${hdr?'<w:trPr><w:tblHeader/></w:trPr>':''}${cells.map((c,i)=>cell(c,i,hdr)).join('')}</w:tr>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:left w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:right w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="E2E8F0"/><w:insideV w:val="single" w:sz="4" w:color="E2E8F0"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x=>`<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${tr(header,true)}${rows.map(r=>tr(r,false)).join('')}</w:tbl>${para('',{before:0,after:0})}`;
+}
+function buildReportXml(){
+  const lc = latestCard(); const name = SEAFARER||'조회 선원'; const rank = lc?.e.rank||SEAFARER_RANK||'-';
+  const n1 = Math.max(1,+$('#fleetNow').value||1), n0 = Math.max(1,+$('#fleetPrev').value||1);
+  const fa = yearStats(String(Y)), fb = yearStats(String(PY)); const t = LAST_TOT;
+  const f = (v,d=2)=>fmtN(v,d);
+  let b = '';
+  b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40});
+  b += para(`Wilhelmsen Ship Management Korea · HSEQ · 생성일 ${today.toISOString().slice(0,10)}`,{size:9,color:'64748B',after:160});
+  b += h1('1. 선원 정보');
+  b += table(['항목','내용'],[['성명',name],['직급',rank],['최근 승선 선박',lc?`${lc.e.matched} (${lc.a} ~ ${lc.e.sign_off||'on board'})`:'-'],['조회 승선기간',`${LAST_CARDS.length}개 · 총 ${LAST_CARDS.reduce((x,c)=>x+c.days,0)}일`]],[2400,7200]);
+  b += h1('2. Fleet Average per Vessel vs 본인 실적');
+  b += table(['지표',`${Y} YTD (척당)`,`${PY} (척당)`,'본인 (승선기간 합계)'],[
+    ['PSC Inspections', f(fa.insp/n1), f(fb.insp/n0), `${t.insp}`],
+    ['PSC Deficiencies', f(fa.defs/n1), f(fb.defs/n0), `${t.defs}`],
+    ['Deficiency-free rate', fa.insp?f(100*fa.clean/fa.insp,0)+' %':'–', fb.insp?f(100*fb.clean/fb.insp,0)+' %':'–', t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)} %)`:'–'],
+    ['PSC Detentions (fleet total)', `${fa.det}`, `${fb.det}`, `${t.det}`],
+    ['Unplanned Unavailability (h)', f(fa.uaH/n1,1), f(fb.uaH/n0,1), `${f(t.uaH,1)} h (${t.uaN}건)`],
+    ['LTIF (count)', `${fa.lti}`, `${fb.lti}`, `${t.lti}`],
+  ],[3000,2000,2000,2600]);
+  b += h1('3. Performance Assessment (Best shipping practice 기준)');
+  if (LAST_ASSESS) {
+    const a = LAST_ASSESS;
+    b += para([{t:'판정: ',b:true,size:10.5},{t:a.rating||'',b:true,size:10.5,color:/above/i.test(a.rating)?'1A7F4B':/below/i.test(a.rating)?'B3261E':'12579A'}]);
+    b += para(a.summary||'',{size:10});
+    const q=[['Strengths',a.swot?.strengths,'1A7F4B'],['Weaknesses',a.swot?.weaknesses,'B3261E'],['Opportunities',a.swot?.opportunities,'12579A'],['Threats',a.swot?.threats,'A05A00']];
+    q.forEach(([k,arr,c])=>{ b += para(k,{b:true,size:10.5,color:c,before:120,after:40}); (arr||[]).forEach(x=>b+=bullet(x)); });
+    if (a.recommendation) b += para([{t:'Recommendation: ',b:true,size:10},{t:a.recommendation,size:10}],{before:120});
+    b += para(`※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude(${a.model||''})가 생성한 참고용 평가임. 개인 귀책 판단 시 사고보고서·감사 결과 등 원자료 확인 필요.`,{size:8.5,color:'94A3B8',before:80});
+  } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 Performance Assessment 생성 후 다시 다운로드하십시오)',{i:true,size:9.5,color:'94A3B8'});
+  b += h1('4. 승선 기간 요약');
+  b += table(['Vessel','Period','Rank','Days','PSC','Def.','무결함 (%)','Det.','Events','Unavail.(h)','LTIF'],
+    LAST_CARDS.map(c=>[c.e.matched,`${c.a} ~ ${c.e.sign_off||'on board'}`,c.e.rank||'',`${c.days}`,`${c.s.insp}`,`${c.s.defs}`,c.s.insp?`${c.s.clean} (${f(100*c.s.clean/c.s.insp,0)}%)`:`${c.s.clean}`,`${c.s.det}`,`${c.s.uaN}`,f(c.s.uaH,1),`${c.s.lti}`])
+    .concat([['합계','','',`${LAST_CARDS.reduce((x,c)=>x+c.days,0)}`,`${t.insp}`,`${t.defs}`,t.insp?`${t.clean} (${f(100*t.clean/t.insp,0)}%)`:`${t.clean}`,`${t.det}`,`${t.uaN}`,f(t.uaH,1),`${t.lti}`]]),
+    [1700,1900,600,600,600,600,1000,600,700,800,500]);
+  const psc=[],ua=[],lti=[]; LAST_CARDS.forEach(c=>{c.psc.forEach(p=>psc.push({c,p}));c.ua.forEach(u=>ua.push({c,u}));c.lti.forEach(l=>lti.push({c,l}));});
+  b += h1(`5. PSC Inspections (${psc.length}) — 검사 ${t.insp} · 결함 ${t.defs} · 무결함 ${t.clean}${t.insp?` (${f(100*t.clean/t.insp,0)}%)`:''} · Detention ${t.det}`);
+  if (LAST_PAYLOAD?.psc_by_mou) { b += h2('MOU별 Flawless rate'); b += table(['MOU','검사','무결함','Flawless %','결함','Detention'], Object.entries(LAST_PAYLOAD.psc_by_mou).sort((x,y)=>y[1].inspections-x[1].inspections).map(([k,v])=>[k,`${v.inspections}`,`${v.deficiency_free}`,`${v.flawless_rate_pct} %`,`${v.deficiencies}`,`${v.detentions}`]),[2600,1400,1400,1400,1400,1400]); }
+  if (psc.length) {
+    b += table(['Vessel','Date','Port / Country','MOU','Def.','Code 17','Code 30','Result'], psc.sort((x,y)=>x.p.date.localeCompare(y.p.date)).map(({c,p})=>[c.e.matched,p.date,`${p.port}${p.country?', '+p.country:''}`,p.mou,`${p.def_count}`,`${p.code17||''}`,`${p.code30||''}`,p.detention?'DETENTION':p.def_count===0?'No deficiency':'Deficiency']),[1800,1000,2000,1300,600,700,700,1500]);
+    const withDef = psc.filter(x=>x.p.deficiencies.length);
+    if (withDef.length){ b += h2('결함 상세'); withDef.forEach(({c,p})=>{ b += para(`${c.e.matched} · ${p.date} · ${p.port} (${p.mou})${p.detention?' · DETENTION':''}`,{b:true,size:9.5,before:100,after:20}); p.deficiencies.forEach(d=>b+=bullet(`[${d.code||'-'}] ${d.desc}${d.item?` [${d.item}]`:''}`)); }); }
+  } else b += para('승선 기간 중 PSC 검사 없음',{i:true,size:9.5,color:'94A3B8'});
+  b += h1(`6. Unplanned Unavailability — Unscheduled stoppage (${ua.length}건 · ${f(t.uaH,1)} h)`);
+  b += ua.length ? table(['Vessel','Date','Hours','Remark','Docmap'], ua.sort((x,y)=>x.u.date.localeCompare(y.u.date)).map(({c,u})=>[c.e.matched,u.date,`${f(u.hours,1)}${u.hours>=24?` (≥24h, ${f(u.hours/24,1)}d)`:''}`,u.remark+(u.kpi!=='Yes'?` [${u.kpi}]`:''),u.docmap]),[1800,1000,1300,4000,1500]) : para('승선 기간 중 Unscheduled stoppage 없음',{i:true,size:9.5,color:'94A3B8'});
+  b += h1(`7. LTIF / LTSF (${lti.length})`);
+  b += lti.length ? table(['Vessel','Date','Type','Rank','Description'], lti.sort((x,y)=>x.l.date.localeCompare(y.l.date)).map(({c,l})=>[c.e.matched,l.date,l.type,l.rank,l.desc]),[1800,1000,800,900,5100]) : para('승선 기간 중 LTI/LTS 없음',{i:true,size:9.5,color:'94A3B8'});
+  b += para(`Sources: ${DATA.sources.psc} (Database) · ${DATA.sources.kpi} (Tech Data / Crew Data1) · index ${DATA.generated}`,{size:8,color:'94A3B8',before:240});
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${b}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="500" w:footer="500" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+}
+// --- minimal ZIP (store) writer ---
+const CRC_T = (()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){ // files: [{name, data(string)}]
+  const enc=new TextEncoder(); const parts=[]; const central=[]; let off=0;
+  const u16=v=>[v&255,(v>>8)&255], u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  const dt = (()=>{const d=new Date();return {t:((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF, d:(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF};})();
+  for (const f of files){ const nm=enc.encode(f.name), data=enc.encode(f.data), crc=crc32(data);
+    const lh=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(dt.t),...u16(dt.d),...u32(crc),...u32(data.length),...u32(data.length),...u16(nm.length),...u16(0)]);
+    parts.push(lh,nm,data);
+    central.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(dt.t),...u16(dt.d),...u32(crc),...u32(data.length),...u32(data.length),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+    off += lh.length+nm.length+data.length; }
+  const cdSize = central.reduce((a,x)=>a+x.length,0);
+  const eocd=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  return new Blob([...parts,...central,eocd],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+function exportDocx(){
+  if (!LAST_CARDS||!LAST_CARDS.length){ alert('먼저 Performance 조회를 실행하세요.'); return; }
+  const files=[
+    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
+    {name:'word/_rels/document.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'},
+    {name:'word/document.xml',data:buildReportXml()},
+  ];
+  const blob = zipStore(files);
+  const nm = (SEAFARER||'crew').replace(/[^\w가-힣]+/g,'_');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`WSMK_Crew_Performance_${nm}_${today.toISOString().slice(0,10)}.docx`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
 }
 
 /* ---------------- start ---------------- */
