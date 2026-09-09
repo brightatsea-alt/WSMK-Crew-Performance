@@ -267,7 +267,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
     </div>
 
     <div class="card">
-      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">선원별 추출 결과를 확인·수정 후 조회 · 승선 기간 = ON BOARD 행의 Start Date ~ End Date만 적용</span>
+      <div class="hd"><h2>2. 승선 기간 확인</h2><span class="hint">선원별 추출 결과를 확인·수정 후 조회 · 승선 기간 = Type/Status에 'On Board'가 포함된 행(예: On Board (o.o.s))의 Start Date ~ End Date만 적용</span>
         <span style="flex:1"></span><button class="btn sm" id="addGroup">+ 선원 추가</button></div>
       <div class="bd">
         <div id="groups"></div>
@@ -457,12 +457,13 @@ function mergeIntoGroups(q){
 
 /* ---------------- on-board 판정: status가 ON BOARD 인 행만 승선기간. EARNED LEAVE UNPAID 등 휴가·미승선 행은 제외 ---------------- */
 const LEAVE_RE = /\b(EARNED\s+LEAVE|LEAVE|UNPAID|VACATION|HOLIDAY|SHORE\s+STAY|STAND\s*-?\s*BY|TRAINING|MEDICAL|SICK)\b/i;
-const ONBOARD_RE = /^\s*(ON\s*-?\s*BOARD|ONBOARD|ON\s+BD|SEA\s+SERVICE|SIGN(ED)?\s*ON)\s*$/i;
+const ONBOARD_RE = /(ON\s*-?\s*BOARD|ONBOARD|ON\s+BD|SEA\s+SERVICE|SIGN(ED)?\s*ON)/i;   // Type/Status에 'On Board'가 포함되면 승선 (예: 'On Board (o.o.s)')
 function offReason(e){
   if (!e) return '';
-  if (e.on_board===false || e.leave===true) return e.status || e.vessel || 'NOT ON BOARD';
   const st=String(e.status||'').trim();
-  if (st && !ONBOARD_RE.test(st)) return st;                       // status 열이 있는데 ON BOARD 가 아니면 제외
+  if (st && ONBOARD_RE.test(st)) return '';                          // 'On Board' 포함 → 무조건 승선
+  if (e.on_board===false || e.leave===true) return st || e.vessel || 'NOT ON BOARD';
+  if (st) return st;                                                 // status/type 열이 있는데 ON BOARD 가 아니면 제외
   if (LEAVE_RE.test(String(e.vessel||'')) || LEAVE_RE.test(String(e.rank||''))) return e.vessel || e.rank; // 선박명 자리에 휴가 문구
   return '';
 }
@@ -495,7 +496,7 @@ function renderGroups(){
       <button class="btn sm" data-add="${g.id}">+ 행</button><button class="btn sm" data-del="${g.id}" title="이 선원 제거">✕</button></div>
     <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Start Date (sign on)</th><th>End Date (sign off)</th><th></th></tr></thead>
     <tbody>${g.entries.map((e,i)=>isLeave(e)?`<tr class="leave" style="background:var(--warn-soft);color:var(--ink2)">
-      <td><span class="pill warn">${/LEAVE|VACATION|HOLIDAY/i.test(e.reason||e.vessel)?'🏖 휴가':'⏸ 미승선'}</span> <b>${esc(e.reason||e.vessel||'NOT ON BOARD')}</b>${e.vessel && e.vessel!==e.reason?`<div class="remark">${esc(e.vessel)}</div>`:''}<div class="remark" style="margin-top:3px">status가 ON BOARD가 아니므로 승선기간·성과 분석에서 제외됩니다</div></td>
+      <td><span class="pill warn">${/LEAVE|VACATION|HOLIDAY/i.test(e.reason||e.vessel)?'🏖 휴가':'⏸ 미승선'}</span> <b>${esc(e.reason||e.vessel||'NOT ON BOARD')}</b>${e.vessel && e.vessel!==e.reason?`<div class="remark">${esc(e.vessel)}</div>`:''}<div class="remark" style="margin-top:3px">Type/Status에 'On Board'가 없으므로 승선기간·성과 분석에서 제외됩니다</div></td>
       <td>${esc(e.rank||'')}</td><td class="num">${esc(e.sign_on)}</td><td class="num">${esc(e.sign_off||'')}</td>
       <td><button class="btn sm" data-rm="${i}" title="삭제">✕</button></td></tr>`:`<tr>
       <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
