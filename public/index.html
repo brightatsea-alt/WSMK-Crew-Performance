@@ -280,6 +280,12 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
         </div>
         <div class="queue" id="queue"></div>
         <div class="remark hidden" id="moreHint" style="margin-top:6px">＋ 다른 선원의 스크린샷/PDF를 계속 붙여넣거나 드래그하면 목록에 추가됩니다.</div>
+        <div class="defaults" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:8px 10px;border:1px dashed var(--line2);border-radius:8px;background:var(--surface2)">
+          <span style="font-size:12px;color:var(--ink2)"><b>직책 지정</b> <span class="remark">스크린샷에 이름·직급 등 개인정보가 없을 때 — 여기 입력한 직책이 추출 결과에 적용됩니다</span></span>
+          <input id="defRank" list="rankList" placeholder="직책 (예: Chief Engineer, C/O)" style="padding:6px 10px;border:1px solid var(--line2);border-radius:8px;min-width:210px">
+          <datalist id="rankList"><option value="Master"><option value="Chief Officer"><option value="2nd Officer"><option value="3rd Officer"><option value="Chief Engineer"><option value="2nd Engineer"><option value="3rd Engineer"><option value="4th Engineer"><option value="ETO"><option value="Bosun"><option value="AB"><option value="OS"><option value="Oiler"><option value="Wiper"><option value="Fitter"><option value="Chief Cook"><option value="Cadet"></datalist>
+          <input id="defName" placeholder="선원 이름 (선택)" style="padding:6px 10px;border:1px solid var(--line2);border-radius:8px;min-width:160px">
+        </div>
         <div class="actions">
           <button class="btn primary" id="analyzeBtn" disabled>승선기간 분석 (Claude)</button>
           <button class="btn" id="clearImg">모두 지우기</button>
@@ -458,7 +464,8 @@ $('#analyzeBtn').onclick = async () => {
     q.status='busy'; renderQueue(); $('#exStatus').textContent=`추출 중 ${done+fail+1}/${todo.length}…`;
     try {
       const j = await api('/api/extract',{method:'POST',body:JSON.stringify({image:q.b64, media_type:q.type})});
-      q.seafarer=j.seafarer||null; q.rank=j.rank||null; q.entries=j.entries||[]; q.status='done'; done++;
+      const defRank=$('#defRank').value.trim(), defName=$('#defName').value.trim();
+      q.seafarer=j.seafarer||defName||null; q.rank=j.rank||defRank||null; q.entries=(j.entries||[]).map(e=>({...e, rank:e.rank||defRank||''})); q.status='done'; done++;
       mergeIntoGroups(q);
     } catch(err){ q.status='err'; q.error=err.message; fail++; }
     renderQueue(); renderGroups();
@@ -513,7 +520,7 @@ function renderGroups(){
   const opts = v => `<option value="">— 선박 선택 —</option>` + DATA.vessels.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
   box.innerHTML = REPORTS.map((g,gi)=>`<div class="group" data-g="${g.id}">
     <div class="gh"><span class="idx" style="background:var(--brand);color:#fff;font-weight:700;border-radius:6px;padding:1px 8px;font-size:12px">${gi+1}</span>
-      <input class="gn" data-gk="name" value="${esc(g.name)}" placeholder="선원 이름"><input class="gr" data-gk="rank" value="${esc(g.rank)}" placeholder="직급">
+      <input class="gn" data-gk="name" value="${esc(g.name)}" placeholder="선원 이름"><input class="gr" data-gk="rank" value="${esc(g.rank)}" placeholder="직책 (없으면 입력)" title="직책을 입력하면 직급이 없는 승선 행에 적용됩니다">
       <span class="remark">${g.entries.filter(e=>!isLeave(e)).length}개 승선기간 (ON BOARD 행만)</span><span style="flex:1"></span>
       <button class="btn sm" data-add="${g.id}">+ 행</button><button class="btn sm" data-del="${g.id}" title="이 선원 제거">✕</button></div>
     <div class="tbl-wrap"><table class="entries"><thead><tr><th style="width:36%">Vessel (fleet match)</th><th style="min-width:90px">Rank</th><th>Start Date (sign on)</th><th>End Date (sign off)</th><th></th></tr></thead>
@@ -525,7 +532,7 @@ function renderGroups(){
       <td><button class="btn sm" data-rm="${i}" title="삭제">✕</button></td></tr>`).join('')}</tbody></table></div></div>`).join('');
   box.querySelectorAll('.group').forEach(el=>{
     const g=REPORTS.find(r=>r.id===el.dataset.g);
-    el.querySelectorAll('[data-gk]').forEach(inp=>inp.onchange=()=>{ g[inp.dataset.gk]=inp.value; });
+    el.querySelectorAll('[data-gk]').forEach(inp=>inp.onchange=()=>{ g[inp.dataset.gk]=inp.value.trim(); if(inp.dataset.gk==='rank'){ g.entries.forEach(e=>{ if(!e.rank||e._autoRank){ e.rank=g.rank; e._autoRank=true; } }); renderGroups(); } });
     el.querySelectorAll('tbody input,tbody select').forEach(inp=>inp.onchange=()=>{ g.entries[+inp.dataset.i][inp.dataset.k]=inp.value; inp.classList.toggle('bad', !inp.value && inp.dataset.k!=='sign_off' && inp.dataset.k!=='rank'); });
     el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ g.entries.splice(+b.dataset.rm,1); renderGroups(); });
     el.querySelector('[data-add]').onclick=()=>{ g.entries.push({vessel:'',matched:'',rank:'',sign_on:'',sign_off:''}); renderGroups(); };
@@ -591,7 +598,7 @@ function renderResults(){
   box.querySelectorAll('[data-docx2]').forEach(b=>b.onclick=()=>exportDocx([REPORTS.find(r=>r.id===b.dataset.docx2)]));
 }
 function renderWho(g){
-  const lc=latestCard(g); const rank=lc?.e.rank||g.rank||''; const name=g.name||'조회 선원';
+  const lc=latestCard(g); const rank=g.rank||lc?.e.rank||''; const name=g.name||'조회 선원';
   $(`#who-${g.id}`).innerHTML = `<div class="avatar">${esc(name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?')}</div>
     <div class="whoinfo"><div class="name">${esc(name)}</div><div class="meta">${rank?`<b>${esc(rank)}</b>`:''}최근 승선: <strong>${esc(lc.e.matched)}</strong> (${lc.a} ~ ${lc.e.sign_off||'on board'}) · 총 ${g.cards.length}개 승선기간 · ${g.tot.days}일</div></div>
     <div class="whoright"><button class="btn primary sm" data-docx2="${g.id}" title="이 선원 보고서를 Word(.docx)로 다운로드">📄 Word 다운로드</button></div>`;
@@ -649,7 +656,7 @@ function buildPayload(g){
   const {n1,n0}=fleetN(); const fa=yearStats(String(Y)), fb=yearStats(String(PY)); fa._n=n1; fb._n=n0;
   const per = n => ({insp_per_vessel:+(n.insp/n._n).toFixed(2), def_per_vessel:+(n.defs/n._n).toFixed(2), deficiency_free_rate_pct: n.insp?Math.round(100*n.clean/n.insp):null, detentions_total:n.det, unsched_stoppage_hours_per_vessel:+(n.uaH/n._n).toFixed(1), unsched_stoppage_events_per_vessel:+(n.uaN/n._n).toFixed(2), ltif_count_total:n.lti});
   const fm1=fleetMou(String(Y)); const fleet_mou={}; Object.entries(fm1).forEach(([k,v])=>fleet_mou[k]=Math.round(100*v.c/v.n));
-  return { seafarer:g.name||null, rank:g.rank||null, today: today.toISOString().slice(0,10),
+  return { seafarer:g.name||null, rank:rankOf(g)||null, today: today.toISOString().slice(0,10),
     fleet_average_per_vessel:{ [Y+' YTD']:per(fa), [String(PY)]:per(fb) }, fleet_flawless_rate_by_mou_pct_ytd: fleet_mou,
     totals:{...g.tot, days_on_board:g.tot.days}, psc_by_mou:g.mou,
     not_on_board_periods:g.entries.filter(isLeave).map(e=>({status:e.reason||e.vessel, sign_on:e.sign_on, sign_off:e.sign_off||null})), not_on_board_days_excluded:leaveDays(g),
@@ -679,14 +686,14 @@ function ssmmEvents(g){
 async function runSsmm(g){
   g.ssmm=null; g.ssmmErr=null; g.ssmmBusy=true; renderSsmm(g);
   try {
-    const a=g.assess; const j=await api('/api/ssmm',{method:'POST',body:JSON.stringify({seafarer:g.name, rank:latestCard(g)?.e.rank||g.rank||null, summary:a.summary, swot:a.swot, recommendation:a.recommendation, events:ssmmEvents(g)})});
+    const a=g.assess; const j=await api('/api/ssmm',{method:'POST',body:JSON.stringify({seafarer:g.name, rank:rankOf(g)||null, summary:a.summary, swot:a.swot, recommendation:a.recommendation, events:ssmmEvents(g)})});
     g.ssmm=j;
   } catch(err){ g.ssmmErr=err.message; }
   g.ssmmBusy=false; renderSsmm(g);
 }
 /* 기관부 보완 점검 — best shipping practice 기준 PMS·기기 보완 점검 (engineer 직급만) */
 const ENG_RE=/(chief\s*eng|c\/e|\bce\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
-function rankOf(g){ return latestCard(g)?.e.rank||g.rank||''; }
+function rankOf(g){ return g.rank||latestCard(g)?.e.rank||''; }
 function isEngineer(g){ return ENG_RE.test(rankOf(g)); }
 async function runEng(g){
   g.eng=null; g.engErr=null; g.engBusy=true; renderEng(g);
@@ -789,7 +796,7 @@ function table(header, rows, widths){
   return `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:color="CBD5E1"/><w:left w:val="single" w:sz="4" w:color="CBD5E1"/><w:bottom w:val="single" w:sz="4" w:color="CBD5E1"/><w:right w:val="single" w:sz="4" w:color="CBD5E1"/><w:insideH w:val="single" w:sz="4" w:color="E2E8F0"/><w:insideV w:val="single" w:sz="4" w:color="E2E8F0"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x=>`<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>${tr(header,true)}${rows.map(r=>tr(r,false)).join('')}</w:tbl>${para('',{before:0,after:0})}`;
 }
 function reportBody(g, first){
-  const lc=latestCard(g); const name=g.name||'조회 선원'; const rank=lc?.e.rank||g.rank||'-';
+  const lc=latestCard(g); const name=g.name||'조회 선원'; const rank=g.rank||lc?.e.rank||'-';
   const {n1,n0}=fleetN(); const fa=yearStats(String(Y)), fb=yearStats(String(PY)); const t=g.tot; const f=(v,d=2)=>fmtN(v,d);
   let b='';
   b += para('WSMK Crew Performance Report',{b:true,size:20,color:'0B3D6B',after:40,pageBreak:!first});
