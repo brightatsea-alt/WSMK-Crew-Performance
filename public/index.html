@@ -209,6 +209,9 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .ssmm ul{margin:0;padding-left:18px;font-size:13px}
 .ssmm.eng{border-left-color:var(--warn)}
 .ssmm.engrec{border-left-color:var(--good)}
+.ssmm.engchart{border-left-color:#f59e0b}
+.ssmm.engchart h4{color:#7c4a00}
+.ssmm.engchart .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
 .ssmm.engrec h4{color:#1a5c2a}
 .ssmm.eng h4{color:#7c4a00}
 .engt{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -701,8 +704,25 @@ function renderEngRec(g){
     ${r.headline?`<div class="rec" style="margin:0 0 8px"><b>핵심</b> — ${esc(r.headline)}</div>`:''}
     <ol class="sf">${(r.guidance||[]).map(x=>`<li><div class="sh"><b>${esc(x.topic)}</b>${x.ref?`<span class="cl">↳ ${esc(x.ref)}</span>`:''}</div><div class="why">${esc(x.guide)}</div></li>`).join('')}</ol></div>`;
 }
+/* 사건 발생 기기 분석 — Unplanned Unavailability(시간·건수) 및 기관 관련 PSC 결함(건수)을 system별로 집계해 막대그래프로 표시 */
+function renderEngChart(g){
+  const el=$(`#engchart-${g.id}`); if(!el) return;
+  const bd=(g.eng&&!g.engBusy&&!g.engErr&&g.eng.breakdown)||[]; if(!bd.length){ el.innerHTML=''; return; }
+  const rows=bd.slice().sort((a,b)=>(b.ua_hours-a.ua_hours)||((b.ua_count+b.psc_count)-(a.ua_count+a.psc_count)));
+  const maxH=Math.max(1,...rows.map(r=>r.ua_hours)), maxC=Math.max(1,...rows.map(r=>Math.max(r.ua_count,r.psc_count)));
+  const W=680,LW=235,BW=W-LW-80,RH=34,H=rows.length*RH+30;
+  const bars=rows.map((r,i)=>{ const y=20+i*RH; const wh=Math.round(BW*r.ua_hours/maxH), wu=Math.round(BW*r.ua_count/maxC), wp=Math.round(BW*r.psc_count/maxC);
+    return `<text x="${LW-8}" y="${y+14}" text-anchor="end" font-size="12" font-weight="600" fill="#0f172a">${esc(r.system)}</text>
+      <rect x="${LW}" y="${y}" width="${Math.max(wh,r.ua_hours?3:0)}" height="9" rx="2" fill="#f59e0b"/><text x="${LW+Math.max(wh,r.ua_hours?3:0)+4}" y="${y+8}" font-size="10" fill="#92400e">${r.ua_hours?r.ua_hours+' h · '+r.ua_count+'건':''}</text>
+      <rect x="${LW}" y="${y+11}" width="${Math.max(wp,r.psc_count?3:0)}" height="9" rx="2" fill="#0b3d6b"/><text x="${LW+Math.max(wp,r.psc_count?3:0)+4}" y="${y+19}" font-size="10" fill="#0b3d6b">${r.psc_count?'PSC '+r.psc_count+'건':''}</text>`; }).join('');
+  const tot=rows.reduce((a,r)=>({h:a.h+r.ua_hours,u:a.u+r.ua_count,p:a.p+r.psc_count}),{h:0,u:0,p:0});
+  el.innerHTML=`<div class="ssmm engchart"><h4>📊 사건 발생 기기 분석 <span class="remark">승선 기간 중 Unplanned Unavailability ${fmtN(tot.h,1)} h (${tot.u}건) · 기관 관련 PSC 결함 ${tot.p}건 — system별</span></h4>
+    <div class="legend" style="margin:0 0 6px"><span><i style="background:#f59e0b"></i>Unplanned Unavailability (h · 건)</span><span><i style="background:#0b3d6b"></i>PSC 결함 (건)</span></div>
+    <div class="tbl-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;font-family:inherit">${bars}</svg></div>
+    <table class="engt" style="margin-top:8px"><thead><tr><th>System</th><th>UA</th><th>PSC</th><th>사건</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.system)}</b></td><td class="num">${r.ua_count?`${r.ua_count}건 · ${r.ua_hours} h`:'–'}</td><td class="num">${r.psc_count||'–'}</td><td>${(r.events||[]).map(e=>`<div class="remark">• ${esc(e)}</div>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function renderEng(g){
-  renderEngRec(g);
+  renderEngRec(g); renderEngChart(g);
   const el=$(`#eng-${g.id}`); if(!el) return;
   const hd='<h4>🔧 기관부 PMS·기기 보완 점검 <span class="remark">Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준</span></h4>';
   if (g.engBusy){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Best shipping practice를 기준으로 보완 점검이 필요한 PMS·기기를 검토하고 있습니다…</div></div>`; return; }
@@ -748,6 +768,7 @@ function renderAssessBody(g){
     <div id="ssmm-${g.id}"></div>
     <div id="engrec-${g.id}"></div>
     <div id="eng-${g.id}"></div>
+    <div id="engchart-${g.id}"></div>
     <div class="caveat">※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude가 생성한 참고용 평가입니다. 개인 귀책 판단 시에는 사고보고서·감사 결과 등 원자료를 확인하십시오.</div>`;
   st.textContent = `${j.model} · ${(j.ms/1000).toFixed(1)}s`;
   renderSsmm(g); renderEng(g);
@@ -810,6 +831,10 @@ function reportBody(g, first){
       b += para(`기관부 PMS·기기 보완 점검 (Best shipping practice 기준 · ${rankOf(g)})`,{b:true,size:11,color:'0B3D6B',before:200,after:60});
       g.eng.items.forEach((x,i)=>{ b += para([{t:`${i+1}. [${x.priority}] ${x.system}`,b:true,size:10.5},{t:x.equipment?` — ${x.equipment}`:'',size:10}],{before:80,after:30}); b += bullet(`점검: ${x.check}`); if(x.pms) b += bullet(`PMS 반영: ${x.pms}`); if(x.basis) b += bullet(`근거: ${x.basis}`); if(x.link) b += bullet(`연계: ${x.link}`); });
       if (g.eng.overall) b += para([{t:'종합: ',b:true,size:10},{t:g.eng.overall,size:10}],{before:80});
+    }
+    if (g.eng && (g.eng.breakdown||[]).length){
+      b += para('사건 발생 기기 분석 (Unplanned Unavailability · 기관 관련 PSC 결함, system별)',{b:true,size:11,color:'0B3D6B',before:200,after:60});
+      b += table(['System','Unplanned Unavailability','PSC 결함','사건'], g.eng.breakdown.slice().sort((x,y)=>y.ua_hours-x.ua_hours).map(r=>[r.system, r.ua_count?`${r.ua_count}건 · ${r.ua_hours} h`:'-', String(r.psc_count||'-'), (r.events||[]).join('; ')]), [2200,1800,1000,4600]);
     }
     b += para(`※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude(${a.model||''})가 생성한 참고용 평가임. 개인 귀책 판단 시 사고보고서·감사 결과 등 원자료 확인 필요.`,{size:8.5,color:'94A3B8',before:80});
   } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 생성 완료 후 다시 다운로드하십시오)',{i:true,size:9.5,color:'94A3B8'});
