@@ -666,7 +666,7 @@ async function runAssessment(g){
     g.assess=j; g.err=null;
   } catch(err){ g.err=err.message; }
   g.busy=false; renderAssessBody(g); renderGroups();
-  if (g.assess) await runSsmm(g);
+  if (g.assess) await Promise.all([runSsmm(g), isEngineer(g)?runEng(g):Promise.resolve()]);   // SSMM 조항 + (기관부) PMS 보완점검 병렬
 }
 /* SSMM 이행 강조 사항 — SWOT + 기록된 사건을 바탕으로 SSMM(Rev 47) 조항 제안 */
 function ssmmEvents(g){
@@ -681,7 +681,6 @@ async function runSsmm(g){
     g.ssmm=j;
   } catch(err){ g.ssmmErr=err.message; }
   g.ssmmBusy=false; renderSsmm(g);
-  if (g.assess && isEngineer(g)) await runEng(g);
 }
 /* 기관부 보완 점검 — best shipping practice 기준 PMS·기기 보완 점검 (engineer 직급만) */
 const ENG_RE=/(chief\s*eng|c\/e|\bce\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
