@@ -1,0 +1,11 @@
+{
+  "name": "wsmk-crew-performance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WSMK Crew Performance — sea-service screenshot → PSC / Unplanned Unavailability / LTIF",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "index": "python3 scripts/build_index.py \"../WSMK PSC Status & Schedule(Updated) - Editable - Editable.xlsx\" \"../WSMK KPI.xlsx\" data/index.json",
+    "dev": "vercel dev"
+  }
+}
