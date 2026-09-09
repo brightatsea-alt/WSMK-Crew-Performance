@@ -207,6 +207,13 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 .ssmm .cl{font-size:12px;color:var(--ink3)}
 .ssmm .why{font-size:13px;color:var(--ink2);margin:2px 0 4px}
 .ssmm ul{margin:0;padding-left:18px;font-size:13px}
+.ssmm.eng{border-left-color:var(--warn)}
+.ssmm.eng h4{color:#7c4a00}
+.engt{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.engt th{background:var(--surface2);text-align:left;padding:6px 8px;font-size:11.5px;color:var(--ink2);border-bottom:1px solid var(--line)}
+.engt td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.engt tr:last-child td{border-bottom:0}
+.engt td .remark{display:block;margin-top:2px}
 </style>
 </head>
 <body>
@@ -674,6 +681,34 @@ async function runSsmm(g){
     g.ssmm=j;
   } catch(err){ g.ssmmErr=err.message; }
   g.ssmmBusy=false; renderSsmm(g);
+  if (g.assess && isEngineer(g)) await runEng(g);
+}
+/* 기관부 보완 점검 — best shipping practice 기준 PMS·기기 보완 점검 (engineer 직급만) */
+const ENG_RE=/(chief\s*eng|c\/e|\bce\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
+function rankOf(g){ return latestCard(g)?.e.rank||g.rank||''; }
+function isEngineer(g){ return ENG_RE.test(rankOf(g)); }
+async function runEng(g){
+  g.eng=null; g.engErr=null; g.engBusy=true; renderEng(g);
+  try {
+    const a=g.assess; const vessels=[...new Set((g.cards||[]).map(c=>c.e.matched||c.e.vessel).filter(Boolean))];
+    const j=await api('/api/engpms',{method:'POST',body:JSON.stringify({seafarer:g.name, rank:rankOf(g), vessels, summary:a.summary, swot:a.swot, recommendation:a.recommendation, events:ssmmEvents(g), ssmm_focus:(g.ssmm&&g.ssmm.focus)||[]})});
+    g.eng=j;
+  } catch(err){ g.engErr=err.message; }
+  g.engBusy=false; renderEng(g);
+}
+function renderEng(g){
+  const el=$(`#eng-${g.id}`); if(!el) return;
+  const hd='<h4>🔧 기관부 PMS·기기 보완 점검 <span class="remark">Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준</span></h4>';
+  if (g.engBusy){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Best shipping practice를 기준으로 보완 점검이 필요한 PMS·기기를 검토하고 있습니다…</div></div>`; return; }
+  if (g.engErr){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="status err">${esc(g.engErr)} <button class="btn sm" data-eng-retry="${g.id}">다시 시도</button></div></div>`; el.querySelector('[data-eng-retry]').onclick=()=>runEng(g); return; }
+  const j=g.eng; if(!j){ el.innerHTML=''; return; }
+  const pc=p=>p==='상'?'crit':p==='하'?'neutral':'warn';
+  el.innerHTML=`<div class="ssmm eng"><h4>🔧 기관부 PMS·기기 보완 점검 <span class="remark">Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준 · ${esc(rankOf(g))} · ${esc(j.model||'')} · ${j.ms?(j.ms/1000).toFixed(1)+'s':''}</span></h4>
+    <table class="engt"><thead><tr><th>우선</th><th>System / 기기</th><th>보완 점검 내용</th><th>PMS 반영</th><th>근거 (Best practice)</th></tr></thead><tbody>
+    ${(j.items||[]).map(i=>`<tr><td><span class="pill ${pc(i.priority)}">${esc(i.priority)}</span></td><td><b>${esc(i.system)}</b><div class="remark">${esc(i.equipment)}</div></td><td>${esc(i.check)}${i.link?`<div class="remark">↳ ${esc(i.link)}</div>`:''}</td><td>${esc(i.pms)}</td><td class="remark">${esc(i.basis)}</td></tr>`).join('')}
+    </tbody></table>
+    ${j.overall?`<div class="rec" style="margin-top:8px"><b>종합</b> — ${esc(j.overall)}</div>`:''}
+    <div class="caveat">※ 승선 선박 KPI 기록과 SWOT를 바탕으로 Claude가 best shipping practice 기준으로 제안한 참고용 점검 항목입니다. 실제 PMS 반영 전 선박별 maker 지침·Class 요건을 확인하십시오.</div></div>`;
 }
 function renderSsmm(g){
   const el=$(`#ssmm-${g.id}`); if(!el) return;
@@ -705,9 +740,10 @@ function renderAssessBody(g){
     </div>
     ${j.recommendation?`<div class="rec"><b>Recommendation</b> — ${esc(j.recommendation)}</div>`:''}
     <div id="ssmm-${g.id}"></div>
+    <div id="eng-${g.id}"></div>
     <div class="caveat">※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude가 생성한 참고용 평가입니다. 개인 귀책 판단 시에는 사고보고서·감사 결과 등 원자료를 확인하십시오.</div>`;
   st.textContent = `${j.model} · ${(j.ms/1000).toFixed(1)}s`;
-  renderSsmm(g);
+  renderSsmm(g); renderEng(g);
 }
 
 /* ---------------- Word (.docx) export — no external library ---------------- */
@@ -756,6 +792,11 @@ function reportBody(g, first){
       b += para('SSMM 이행 강조 사항 (SWOT → SSMM Rev 47 조항)',{b:true,size:11,color:'0B3D6B',before:200,after:60});
       g.ssmm.focus.forEach((f,i)=>{ b += para([{t:`${i+1}. SSMM ${f.section} ${f.title}`,b:true,size:10.5},{t:(f.clauses||[]).length?`  (${f.clauses.join(', ')})`:'',size:9.5,color:'64748B'}],{before:80,after:30}); b += para(f.why||'',{size:10}); (f.actions||[]).forEach(x=>b+=bullet(x)); });
       if (g.ssmm.overall) b += para([{t:'종합: ',b:true,size:10},{t:g.ssmm.overall,size:10}],{before:80});
+    }
+    if (g.eng && (g.eng.items||[]).length){
+      b += para(`기관부 PMS·기기 보완 점검 (Best shipping practice 기준 · ${rankOf(g)})`,{b:true,size:11,color:'0B3D6B',before:200,after:60});
+      g.eng.items.forEach((x,i)=>{ b += para([{t:`${i+1}. [${x.priority}] ${x.system}`,b:true,size:10.5},{t:x.equipment?` — ${x.equipment}`:'',size:10}],{before:80,after:30}); b += bullet(`점검: ${x.check}`); if(x.pms) b += bullet(`PMS 반영: ${x.pms}`); if(x.basis) b += bullet(`근거: ${x.basis}`); if(x.link) b += bullet(`연계: ${x.link}`); });
+      if (g.eng.overall) b += para([{t:'종합: ',b:true,size:10},{t:g.eng.overall,size:10}],{before:80});
     }
     b += para(`※ 선박 단위 KPI 기록(승선기간 내)을 근거로 Claude(${a.model||''})가 생성한 참고용 평가임. 개인 귀책 판단 시 사고보고서·감사 결과 등 원자료 확인 필요.`,{size:8.5,color:'94A3B8',before:80});
   } else b += para('(평가가 아직 생성되지 않았습니다 — 화면에서 생성 완료 후 다시 다운로드하십시오)',{i:true,size:9.5,color:'94A3B8'});
