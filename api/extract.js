@@ -17,6 +17,8 @@ Rules:
 - DATE rule: each row's period is that row's own Start Date → End Date columns (also labelled Sign On / Sign Off, From / To, Embark / Disembark). For an ON BOARD row this is exactly the time on board. If the table shows both a contract period and a Start/End Date per status row, use the per-row Start/End Date. Never extend an ON BOARD row with the dates of a following leave row, and never merge rows.
 - ON BOARD rule: the status/type column may be labelled Status, Type, Activity, etc. Any row whose status/type text CONTAINS "On Board" / "Onboard" in any form — e.g. "ON BOARD", "On Board (o.o.s)", "On board - OOS", "Onboard (Promotion)" — is sea service → "on_board": true (copy the full text into "status"). Every other row — "EARNED LEAVE UNPAID", "EARNED LEAVE", "LEAVE", "VACATION", "STANDBY", "TRAINING", "MEDICAL", etc. — is NOT sea service → "on_board": false, but still output it with its dates and "status" as written (set "vessel" to the vessel name if one is shown, otherwise to the status text). If the table has no status column, every vessel row is on_board: true unless the vessel/remark text itself says leave.
 - Never skip a leave/off row: it is needed to show the excluded period.
+- The seafarer's name is often in a header above the table (e.g. SURNAME + NAME fields, "CHO" + "SUNG-CHUN" → "CHO SUNG-CHUN"); the rank may be in a RANK field or in an "Acting Rank" column (CENG = Chief Engineer, 2ENG = 2nd Engineer, CO = Chief Officer, MST = Master, etc. — expand abbreviations).
+- Read dates carefully digit by digit: a Start Date can never be in the future, and End Date is never before Start Date. Columns like "Due date" are NOT the End Date — if End Date is blank the person is still on board (sign_off null).
 - Sort by sign_on ascending.
 Known fleet vessel names (use to correct OCR mistakes when the match is obvious): ${data.vessels.join(", ")}`;
 
@@ -28,8 +30,16 @@ module.exports = async (req, res) => {
 
   let body;
   try { body = await readJson(req); } catch { return res.status(400).json({ error: "bad json" }); }
-  const { image, media_type } = body || {};
-  if (!image) return res.status(400).json({ error: "image (base64) 가 필요합니다." });
+  const { image, media_type, tiles } = body || {};
+  const tileList = tiles && Array.isArray(tiles.images) && tiles.images.length ? tiles : null;
+  if (!image && !tileList) return res.status(400).json({ error: "image (base64) 가 필요합니다." });
+  const mt = media_type || "image/png";
+  const imgBlocks = tileList
+    ? tileList.images.map(d => ({ type: "image", source: { type: "base64", media_type: mt, data: d } }))
+    : [{ type: "image", source: { type: "base64", media_type: mt, data: image } }];
+  const ask = tileList
+    ? `The screenshot was too large, so it is given as ${tileList.images.length} tiles of ONE table: a grid of ${tileList.rows} row(s) × ${tileList.cols} column(s), in reading order (left→right, then top→bottom), with about 120 px of overlap between neighbouring tiles. Reassemble each table row across the column tiles (a row's Vessel / Type may be in the left tile and its Start/End Date in the right tile — align by vertical position), and do not duplicate rows that appear twice in the overlap. Then extract the sea-service entries as JSON.`
+    : "Extract the sea-service entries from this screenshot as JSON.";
 
   const payload = {
     model: MODEL,
@@ -37,10 +47,7 @@ module.exports = async (req, res) => {
     system: SYSTEM,
     messages: [{
       role: "user",
-      content: [
-        { type: "image", source: { type: "base64", media_type: media_type || "image/png", data: image } },
-        { type: "text", text: "Extract the sea-service entries from this screenshot as JSON." },
-      ],
+      content: [ ...imgBlocks, { type: "text", text: ask } ],
     }],
   };
 
