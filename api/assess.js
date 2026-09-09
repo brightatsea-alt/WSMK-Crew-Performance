@@ -48,14 +48,13 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         model: MODEL, max_tokens: 3000, system: SYSTEM,
         messages: [
-          { role: "user", content: "Seafarer performance data (JSON):\n" + JSON.stringify(slim) + "\n\n위 데이터로 appraisal JSON을 작성. 모든 문장은 반드시 한국어(보고서체)로 작성하고, 영어 문장은 쓰지 않는다. 직급(rank)과 각 사건의 성격(nature)을 기준으로 책임 영역을 구분하여 평가한다." + (extra || "") },
-          { role: "assistant", content: "{" },
+          { role: "user", content: "Seafarer performance data (JSON):\n" + JSON.stringify(slim) + "\n\n위 데이터로 appraisal JSON을 작성. 모든 문장은 반드시 한국어(보고서체)로 작성하고, 영어 문장은 쓰지 않는다. 직급(rank)과 각 사건의 성격(nature)을 기준으로 책임 영역을 구분하여 평가한다. 응답은 '{' 로 시작하는 JSON 객체 하나만 출력한다." + (extra || "") },
         ],
       }),
     });
     const out = await r.json();
     if (!r.ok) throw Object.assign(new Error(out.error?.message || "Claude API error"), { status: r.status });
-    return "{" + (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+    return (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
   };
   const parse = (text) => {
     const start = text.indexOf("{"); if (start < 0) throw new Error("no json");
