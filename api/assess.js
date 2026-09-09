@@ -8,13 +8,14 @@ Benchmarks: ISM Code, TMSA / RightShip best practice, Tokyo/Paris MOU & USCG PSC
 Rules:
 - Base every statement strictly on the data given. Compare the seafarer's vessel-period figures with the fleet averages (per vessel, current and previous year), scaling for the length of time on board.
 - Attribute cautiously: the data is vessel-level, so say the seafarer "was on board when…" / "shared responsibility for…" rather than asserting personal fault, except where the rank clearly owns the area (e.g. C/E for machinery stoppages, C/O for cargo/deck & LSA/FFA findings, Master overall).
-- Write in Korean (업무용 존칭 없는 보고서체), keeping technical terms (PSC, Detention, Code 17/30, LTIF, Unscheduled stoppage) in English.
+- LANGUAGE: every sentence of summary, swot bullets and recommendation MUST be written in Korean (보고서체, 예: "~함", "~됨", "~필요"). Only technical terms stay in English (PSC, Detention, Code 17/30, LTIF, Unscheduled stoppage, M/E, LSA/FFA). Never write English sentences.
+- Rank responsibility: Unscheduled stoppage / machinery failures (M/E, G/E, boiler, propulsion) belong to the engine department (C/E, 2/E) — do NOT attribute them to Master, C/O or deck officers; for deck officers mention them only as "승선 중 발생한 선박 실적" context. Deck officers (C/O, 2/O, 3/O) own navigation, cargo, LSA/FFA, deck maintenance findings; Master owns SMS implementation and overall PSC outcome.
 - Output ONLY JSON:
 {"rating":"Above fleet average"|"Around fleet average"|"Below fleet average",
  "summary":"3~5 sentences narrative: overall verdict vs fleet average and best shipping practice, key evidence (numbers), main risk area, one-line recommendation",
  "swot":{"strengths":["…"],"weaknesses":["…"],"opportunities":["…"],"threats":["…"]},
  "recommendation":"1~2 sentences: promotion/re-assignment/training recommendation"}
-- Each SWOT list: 2~4 short bullet strings, each citing concrete data (vessel, date, figure). Opportunities = development/training/utilisation opportunities for the company and the seafarer; Threats = risks if the pattern continues (detention, vetting, charterer, owner KPI).`;
+- Each SWOT list: 2~3 short bullet strings (max 120 Korean characters each), each citing concrete data (vessel, date, figure). Opportunities = development/training/utilisation opportunities for the company and the seafarer; Threats = risks if the pattern continues (detention, vetting, charterer, owner KPI).`;
 
 module.exports = async (req, res) => {
   if (!requireAuth(req, res)) return;
@@ -33,8 +34,8 @@ module.exports = async (req, res) => {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: MODEL, max_tokens: 1800, temperature: 0.2, system: SYSTEM,
-        messages: [{ role: "user", content: "Seafarer performance data (JSON):\n" + JSON.stringify(body) + "\n\nWrite the appraisal JSON." }],
+        model: MODEL, max_tokens: 1400, temperature: 0.2, system: SYSTEM,
+        messages: [{ role: "user", content: "Seafarer performance data (JSON):\n" + JSON.stringify(body) + "\n\n위 데이터로 appraisal JSON을 작성. 모든 문장은 반드시 한국어(보고서체)로 작성하고, 영어 문장은 쓰지 않는다." }],
       }),
     });
   } catch (e) {
