@@ -25,6 +25,8 @@ header.top .wrap{display:flex;align-items:center;gap:14px;padding:14px 20px}
 header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
 header .sub{font-size:12px;opacity:.8}
 header .spacer{flex:1}
+header .brand{display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px}
+header .brand:hover{background:rgba(255,255,255,.08)}
 header .meta{font-size:12px;opacity:.85;text-align:right}
 .btn{border:1px solid var(--line2);background:#fff;color:var(--ink);padding:8px 14px;border-radius:8px}
 .btn:hover{background:var(--surface2)}
@@ -186,8 +188,10 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 <!-- ============ APP ============ -->
 <div id="app" class="hidden">
 <header class="top"><div class="wrap">
+  <a class="brand" href="/" title="새로고침 (처음 화면으로)" onclick="location.reload(); return false;">
   <div class="logo">W</div>
   <div><h1>WSMK Crew Performance</h1><div class="sub">Sea-service screenshot → PSC · Unplanned Unavailability · LTIF</div></div>
+  </a>
   <div class="spacer"></div>
   <div class="meta" id="dataMeta">데이터 로딩 중…</div>
   <button class="btn ghost sm" id="logoutBtn">로그아웃</button>
@@ -345,6 +349,7 @@ function renderTiles(){
   const judge = t => {
     if (!c || t.better==null || t.crew==null || t.now==null) return {cls:'', txt:''};
     const diff = t.crew - t.now; const tol = Math.abs(t.now)*0.05;
+    if (t.better==='low' && t.crew===0) return {cls:'good', txt: t.now===0 ? '▲ 0건 (목표 달성)' : '▲ 평균보다 우수'};
     if (Math.abs(diff) <= tol) return {cls:'even', txt:'≈ 평균'};
     const good = t.better==='low' ? diff<0 : diff>0;
     return {cls: good?'good':'bad', txt: good?'▲ 평균보다 우수':'▼ 평균보다 저조'};
