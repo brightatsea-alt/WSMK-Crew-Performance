@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
     ? tileList.images.map(d => ({ type: "image", source: { type: "base64", media_type: mt, data: d } }))
     : [{ type: "image", source: { type: "base64", media_type: mt, data: image } }];
   const ask = tileList
-    ? `The screenshot was too large, so it is given as ${tileList.images.length} tiles of ONE table: a grid of ${tileList.rows} row(s) × ${tileList.cols} column(s), in reading order (left→right, then top→bottom), with about 120 px of overlap between neighbouring tiles. Reassemble each table row across the column tiles (a row's Vessel / Type may be in the left tile and its Start/End Date in the right tile — align by vertical position), and do not duplicate rows that appear twice in the overlap. Then extract the sea-service entries as JSON.`
+    ? `The screenshot was too large, so it is given as ${tileList.images.length} OVERLAPPING tiles of ONE table: a grid of ${tileList.rows} row(s) × ${tileList.cols} column(s), in reading order (left→right, then top→bottom). Neighbouring tiles overlap by about ${tileList.overlap_x||0} px horizontally and ${tileList.overlap_y||0} px vertically, so most table rows are FULLY visible (all columns) in at least one tile. Always read a row from the tile where all of its columns (Vessel, Type, Start Date, End Date …) are visible together; never pair a vessel name with the dates of a different row. Rows or columns that appear in two tiles are the SAME row/column — output each row once, never duplicate. Then extract the sea-service entries as JSON.`
     : "Extract the sea-service entries from this screenshot as JSON.";
 
   const payload = {
