@@ -319,6 +319,7 @@ details.defs li .code.c30{background:var(--crit-soft);color:var(--crit)}
 let TOKEN = sessionStorage.getItem('wsmk_token') || null;
 let DATA = null;
 const todayISO = new Date().toISOString().slice(0,10);
+function overlapsOther(g,i){ const e=g.entries[i]; if(!e||e.leave||!e.sign_on) return false; const a=e.sign_on, b=e.sign_off||todayISO; return g.entries.some((x,j)=>j!==i && !x.leave && x.sign_on && a<=(x.sign_off||todayISO) && x.sign_on<=b && !(a===(x.sign_off||todayISO)||x.sign_on===b)); }
 let QUEUE = [];      // [{id, b64, type, thumb, label, status, seafarer, rank, entries}]
 let REPORTS = [];    // [{id, name, rank, entries:[{vessel,matched,rank,sign_on,sign_off}], cards, tot, assess, payload, mou}]
 const $ = s => document.querySelector(s);
@@ -420,16 +421,17 @@ function downscale(img, max=3000){
 /* Claude vision은 긴 변 1,568px 로 축소해 읽는다 → 가로로 긴 승선이력 표(2,000px+)는 글자가 뭉개져 날짜·선박명 오독.
    1,500px 이하 타일로 잘라(겹침 120px) 순서대로 함께 보내면 원본 해상도로 읽는다. */
 function tileCanvas(cv){
-  const W=cv.width,H=cv.height,MAX=1500,OV=120;
+  const W=cv.width,H=cv.height,MAX=1568;
   const cols=Math.ceil(W/MAX), rows=Math.ceil(H/MAX);
   if (cols===1 && rows===1) return null;
-  const tw=Math.ceil(W/cols), th=Math.ceil(H/rows), tiles=[];
-  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-    const x0=Math.max(0,c*tw-(c?OV:0)), y0=Math.max(0,r*th-(r?OV:0)), x1=Math.min(W,(c+1)*tw+(c<cols-1?OV:0)), y1=Math.min(H,(r+1)*th+(r<rows-1?OV:0));
-    const t=document.createElement('canvas'); t.width=x1-x0; t.height=y1-y0; t.getContext('2d').drawImage(cv,x0,y0,x1-x0,y1-y0,0,0,x1-x0,y1-y0);
+  const starts=(len,n)=>{ if(n===1) return [0]; const step=(len-MAX)/(n-1); return Array.from({length:n},(_,i)=>Math.round(i*step)); };
+  const xs=starts(W,cols), ys=starts(H,rows), tiles=[];
+  for(const y0 of ys) for(const x0 of xs){
+    const tw=Math.min(MAX,W-x0), th=Math.min(MAX,H-y0);
+    const t=document.createElement('canvas'); t.width=tw; t.height=th; t.getContext('2d').drawImage(cv,x0,y0,tw,th,0,0,tw,th);
     tiles.push(t.toDataURL('image/jpeg',0.92).split(',')[1]);
   }
-  return {cols, rows, images: tiles};
+  return {cols, rows, images: tiles, overlap_x: cols>1?Math.round(MAX-(W-MAX)/(cols-1)):0, overlap_y: rows>1?Math.round(MAX-(H-MAX)/(rows-1)):0};
 }
 async function addImageFile(file, label){
   const url = await fileToDataUrl(file);
@@ -552,7 +554,7 @@ function renderGroups(){
     <tbody>${g.entries.map((e,i)=>isLeave(e)?``:`<tr>
       <td><select data-i="${i}" data-k="matched" class="${e.matched?'':'bad'}">${opts(e.matched)}</select>${e.vessel && normName(e.vessel)!==normName(e.matched)?`<div class="remark" style="margin-top:3px">추출: ${esc(e.vessel)}</div>`:''}</td>
       <td><input data-i="${i}" data-k="rank" value="${esc(e.rank)}" placeholder="Rank"></td>
-      <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${(!e.sign_on||e.sign_on>todayISO)?'bad':''}" title="${e.sign_on>todayISO?'미래 날짜 — 추출 오류 가능, 확인 필요':''}"></td>
+      <td><input data-i="${i}" data-k="sign_on" type="date" value="${esc(e.sign_on)}" class="${(!e.sign_on||e.sign_on>todayISO||overlapsOther(g,i))?'bad':''}" title="${e.sign_on>todayISO?'미래 날짜 — 추출 오류 가능, 확인 필요':(overlapsOther(g,i)?'다른 승선 기간과 겹침 — 추출 오류 가능, 확인 필요':'')}"></td>
       <td><input data-i="${i}" data-k="sign_off" type="date" value="${esc(e.sign_off)}" class="${(e.sign_off&&e.sign_on&&e.sign_off<e.sign_on)?'bad':''}" title="${(e.sign_off&&e.sign_on&&e.sign_off<e.sign_on)?'End Date가 Start Date보다 빠름 — 확인 필요':''}"></td>
       <td><button class="btn sm" data-rm="${i}" title="삭제">✕</button></td></tr>`).join('')}</tbody></table></div></div>`).join('');
   box.querySelectorAll('.group').forEach(el=>{
