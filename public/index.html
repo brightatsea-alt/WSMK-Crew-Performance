@@ -702,7 +702,7 @@ async function runAssessment(g){
     g.assess=j; g.err=null;
   } catch(err){ g.err=err.message; }
   g.busy=false; renderAssessBody(g); renderGroups();
-  if (g.assess) await Promise.all([runSsmm(g), isEngineer(g)?runEng(g):Promise.resolve()]);   // SSMM 조항 + (기관부) PMS 보완점검 병렬
+  if (g.assess) await Promise.all([runSsmm(g), runEng(g)]);   // SSMM 조항 + 부서별(기관부/갑판부) PMS·기기 보완점검 병렬
 }
 /* SSMM 이행 강조 사항 — SWOT + 기록된 사건을 바탕으로 SSMM(Rev 47) 조항 제안 */
 function ssmmEvents(g){
@@ -722,6 +722,11 @@ async function runSsmm(g){
 const ENG_RE=/(chief\s*eng|c\/e|\bce\b|\bceng\b|\b[1-4]\s*eng\b|\bteng\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
 function rankOf(g){ return g.rank||latestCard(g)?.e.rank||''; }
 function isEngineer(g){ return ENG_RE.test(rankOf(g)); }
+function deptOf(g){ return isEngineer(g)?"engine":"deck"; }
+function deptLabel(g){ return isEngineer(g)?"기관부":"갑판부"; }
+function recTitle(g){ return isEngineer(g)?"Engineer Recommendation":"Deck Recommendation"; }
+function deptBasis(g){ return isEngineer(g)?"Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준":"Best shipping practice(TMSA·MEG4·RISQ·SIRE·CSS Code·SOLAS) 기준"; }
+function deptEvidence(g){ return isEngineer(g)?"Unplanned Unavailability · PSC 기관 관련 결함 기반 차기 승선 가이드":"Unplanned Unavailability · PSC 갑판 관련 결함 기반 차기 승선 가이드"; }
 async function runEng(g){
   g.eng=null; g.engErr=null; g.engBusy=true; renderEng(g);
   try {
@@ -734,7 +739,7 @@ async function runEng(g){
 function renderEngRec(g){
   const el=$(`#engrec-${g.id}`); if(!el) return;
   const r=g.eng&&g.eng.recommendation; if(g.engBusy||g.engErr||!r||!(r.headline||(r.guidance||[]).length)){ el.innerHTML=''; return; }
-  el.innerHTML=`<div class="ssmm engrec"><h4>🧭 Engineer Recommendation <span class="remark">Unplanned Unavailability · PSC 기관 관련 결함 기반 차기 승선 가이드 · ${esc(rankOf(g))}</span></h4>
+  el.innerHTML=`<div class="ssmm engrec"><h4>🧭 ${recTitle(g)} <span class="remark">${deptEvidence(g)} · ${esc(rankOf(g))}</span></h4>
     ${r.headline?`<div class="rec" style="margin:0 0 8px"><b>핵심</b> — ${esc(r.headline)}</div>`:''}
     <ol class="sf">${(r.guidance||[]).map(x=>`<li><div class="sh"><b>${esc(x.topic)}</b>${x.ref?`<span class="cl">↳ ${esc(x.ref)}</span>`:''}</div><div class="why">${esc(x.guide)}</div></li>`).join('')}</ol></div>`;
 }
@@ -750,7 +755,7 @@ function renderEngChart(g){
       <rect x="${LW}" y="${y}" width="${Math.max(wh,r.ua_hours?3:0)}" height="9" rx="2" fill="#f59e0b"/><text x="${LW+Math.max(wh,r.ua_hours?3:0)+4}" y="${y+8}" font-size="10" fill="#92400e">${r.ua_hours?r.ua_hours+' h · '+r.ua_count+'건':''}</text>
       <rect x="${LW}" y="${y+11}" width="${Math.max(wp,r.psc_count?3:0)}" height="9" rx="2" fill="#0b3d6b"/><text x="${LW+Math.max(wp,r.psc_count?3:0)+4}" y="${y+19}" font-size="10" fill="#0b3d6b">${r.psc_count?'PSC '+r.psc_count+'건':''}</text>`; }).join('');
   const tot=rows.reduce((a,r)=>({h:a.h+r.ua_hours,u:a.u+r.ua_count,p:a.p+r.psc_count}),{h:0,u:0,p:0});
-  el.innerHTML=`<div class="ssmm engchart"><h4>📊 사건 발생 기기 분석 <span class="remark">승선 기간 중 Unplanned Unavailability ${fmtN(tot.h,1)} h (${tot.u}건) · 기관 관련 PSC 결함 ${tot.p}건 — system별</span></h4>
+  el.innerHTML=`<div class="ssmm engchart"><h4>📊 사건 발생 기기 분석 <span class="remark">승선 기간 중 Unplanned Unavailability ${fmtN(tot.h,1)} h (${tot.u}건) · ${deptLabel(g)} 관련 PSC 결함 ${tot.p}건 — system별</span></h4>
     <div class="legend" style="margin:0 0 6px"><span><i style="background:#f59e0b"></i>Unplanned Unavailability (h · 건)</span><span><i style="background:#0b3d6b"></i>PSC 결함 (건)</span></div>
     <div class="tbl-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;font-family:inherit">${bars}</svg></div>
     <table class="engt" style="margin-top:8px"><thead><tr><th>System</th><th>UA</th><th>PSC</th><th>사건</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.system)}</b></td><td class="num">${r.ua_count?`${r.ua_count}건 · ${r.ua_hours} h`:'–'}</td><td class="num">${r.psc_count||'–'}</td><td>${(r.events||[]).map(e=>`<div class="remark">• ${esc(e)}</div>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;
@@ -758,12 +763,12 @@ function renderEngChart(g){
 function renderEng(g){
   renderEngRec(g); renderEngChart(g);
   const el=$(`#eng-${g.id}`); if(!el) return;
-  const hd='<h4>🔧 기관부 PMS·기기 보완 점검 <span class="remark">Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준</span></h4>';
-  if (g.engBusy){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Best shipping practice를 기준으로 보완 점검이 필요한 PMS·기기를 검토하고 있습니다…</div></div>`; return; }
+  const hd=`<h4>🔧 ${deptLabel(g)} PMS·기기 보완 점검 <span class="remark">${deptBasis(g)}</span></h4>`;
+  if (g.engBusy){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="none" style="color:var(--ink3)"><span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:var(--brand2)"></span>Best shipping practice를 기준으로 ${deptLabel(g)} 보완 점검이 필요한 PMS·기기를 검토하고 있습니다…</div></div>`; return; }
   if (g.engErr){ el.innerHTML=`<div class="ssmm eng">${hd}<div class="status err">${esc(g.engErr)} <button class="btn sm" data-eng-retry="${g.id}">다시 시도</button></div></div>`; el.querySelector('[data-eng-retry]').onclick=()=>runEng(g); return; }
   const j=g.eng; if(!j){ el.innerHTML=''; return; }
   const pc=p=>p==='상'?'crit':p==='하'?'neutral':'warn';
-  el.innerHTML=`<div class="ssmm eng"><h4>🔧 기관부 PMS·기기 보완 점검 <span class="remark">Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준 · ${esc(rankOf(g))} · ${esc(j.model||'')} · ${j.ms?(j.ms/1000).toFixed(1)+'s':''}</span></h4>
+  el.innerHTML=`<div class="ssmm eng"><h4>🔧 ${deptLabel(g)} PMS·기기 보완 점검 <span class="remark">${deptBasis(g)} · ${esc(rankOf(g))} · ${esc(j.model||'')} · ${j.ms?(j.ms/1000).toFixed(1)+'s':''}</span></h4>
     <table class="engt"><thead><tr><th>우선</th><th>System / 기기</th><th>보완 점검 내용</th><th>PMS 반영</th><th>근거 (Best practice)</th></tr></thead><tbody>
     ${(j.items||[]).map(i=>`<tr><td><span class="pill ${pc(i.priority)}">${esc(i.priority)}</span></td><td><b>${esc(i.system)}</b><div class="remark">${esc(i.equipment)}</div></td><td>${esc(i.check)}${i.link?`<div class="remark">↳ ${esc(i.link)}</div>`:''}</td><td>${esc(i.pms)}</td><td class="remark">${esc(i.basis)}</td></tr>`).join('')}
     </tbody></table>
@@ -924,12 +929,12 @@ function reportBody(g, first){
     /* Engineer */
     if (g.eng && g.eng.recommendation && (g.eng.recommendation.headline||(g.eng.recommendation.guidance||[]).length)){
       const r=g.eng.recommendation;
-      b += h2(`🧭 Engineer Recommendation  —  Unplanned Unavailability · PSC 기관 관련 결함 기반 차기 승선 가이드 (${rankOf(g)})`);
+      b += h2(`🧭 ${recTitle(g)}  —  ${deptEvidence(g)} (${rankOf(g)})`);
       if (r.headline) b += box(para([{t:'핵심  ',b:true,size:10,color:DC.good},{t:r.headline,size:10}],{before:0,after:0}),{fill:DC.goodSoft,accent:DC.good});
       (r.guidance||[]).forEach((x,i)=>{ b += box(para([{t:`${i+1}  `,b:true,size:10,color:DC.ink3},{t:x.topic,b:true,size:10.5},{t:x.ref?`   ↳ ${x.ref}`:'',size:8.5,color:DC.ink3}],{before:0,after:30}) + para(x.guide||'',{size:9.5,color:DC.ink2,before:0,after:0}),{fill:'FFFFFF',accent:DC.good}); });
     }
     if (g.eng && (g.eng.items||[]).length){
-      b += h2(`🔧 기관부 PMS·기기 보완 점검  —  Best shipping practice(TMSA·RISQ·SIRE·Class PMS·MARPOL) 기준 (${rankOf(g)})`);
+      b += h2(`🔧 ${deptLabel(g)} PMS·기기 보완 점검  —  ${deptBasis(g)} (${rankOf(g)})`);
       const pk=p=>p==='상'?'bad':p==='하'?'info':'warn';
       b += tbl(['우선','System / 기기','보완 점검 내용','PMS 반영','근거'], g.eng.items.map(x=>[pill(x.priority,pk(x.priority)),{t:[{t:x.system,b:true,size:9.5},{t:x.equipment?'\n'+x.equipment:'',size:8.5,color:DC.ink2}]},{t:[{t:x.check,size:9},{t:x.link?'\n↳ '+x.link:'',size:8,color:DC.ink3}]},{t:x.pms,size:9},{t:x.basis,size:8,color:DC.ink2}]),[700,2000,3200,2300,1600],{zebra:true,aligns:['center']});
       if (g.eng.overall) b += box(para([{t:'종합  ',b:true,size:10,color:DC.warn},{t:g.eng.overall,size:10}],{before:0,after:0}),{fill:DC.warnSoft,accent:DC.amber});
