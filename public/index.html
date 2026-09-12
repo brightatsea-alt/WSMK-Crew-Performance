@@ -719,7 +719,7 @@ async function runSsmm(g){
   g.ssmmBusy=false; renderSsmm(g);
 }
 /* 기관부 보완 점검 — best shipping practice 기준 PMS·기기 보완 점검 (engineer 직급만) */
-const ENG_RE=/(chief\s*eng|c\/e|\bce\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
+const ENG_RE=/(chief\s*eng|c\/e|\bce\b|\bceng\b|\b[1-4]\s*eng\b|\bteng\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
 function rankOf(g){ return g.rank||latestCard(g)?.e.rank||''; }
 function isEngineer(g){ return ENG_RE.test(rankOf(g)); }
 async function runEng(g){
