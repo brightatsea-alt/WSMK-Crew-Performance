@@ -5,7 +5,8 @@
 const { requireAuth, readJson } = require("./_auth");
 const SSMM = require("../data/ssmm_index.json");
 
-const MODEL = process.env.ASSESS_MODEL || process.env.CLAUDE_MODEL || "claude-haiku-4-5";
+// API 비용 절감: 모든 분석을 Haiku 4.5로 고정 (환경변수 ASSESS_MODEL 은 무시)
+const MODEL = "claude-haiku-4-5";
 
 // rank → own responsibility chapter (SSMM ch.5)
 const RANK_CH = [

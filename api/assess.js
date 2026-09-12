@@ -1,7 +1,8 @@
 // Performance narrative + SWOT via Claude (auth required)
 const { requireAuth, readJson } = require("./_auth");
 
-const MODEL = process.env.ASSESS_MODEL || process.env.CLAUDE_MODEL || "claude-haiku-4-5";
+// API 비용 절감: 모든 분석을 Haiku 4.5로 고정 (환경변수 ASSESS_MODEL 은 무시)
+const MODEL = "claude-haiku-4-5";
 
 const SYSTEM = `You are a senior HSEQ manager / DPA at a ship management company (WSMK, Wilhelmsen Ship Management Korea) writing a concise performance appraisal of a seafarer, based on the vessels' KPI records during the periods he/she was on board.
 Benchmarks: ISM Code, TMSA / RightShip best practice, Tokyo/Paris MOU & USCG PSC regimes, OCIMF and company KPI targets (PSC deficiency-free rate, zero detention, unscheduled stoppage < 24 hrs/vessel/year target, LTIF < 1.0).

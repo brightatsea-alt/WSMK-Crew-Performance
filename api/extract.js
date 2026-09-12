@@ -4,7 +4,7 @@ const data = require("../data/index.json");
 
 // Haiku 4.5 is the fastest vision-capable model; override with CLAUDE_MODEL if needed
 // (e.g. claude-sonnet-5 for harder / low-quality screenshots).
-const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-4-5";
+const MODEL = "claude-haiku-4-5";
 
 const SYSTEM = `You read screenshots of a seafarer's sea-service record (승선 이력 / crew career table) from a ship-management crewing system.
 Extract every row that describes a period on board a vessel.

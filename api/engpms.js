@@ -4,7 +4,8 @@
 const { requireAuth, readJson } = require("./_auth");
 const SSMM = require("../data/ssmm_index.json");
 
-const MODEL = process.env.ASSESS_MODEL || process.env.CLAUDE_MODEL || "claude-haiku-4-5";
+// API 비용 절감: 모든 분석을 Haiku 4.5로 고정 (환경변수 ASSESS_MODEL 은 무시)
+const MODEL = "claude-haiku-4-5";
 const ENG_RE = /(chief\s*eng|c\/e|\bce\b|\d\s*\/\s*e\b|(first|second|third|fourth|1st|2nd|3rd|4th)\s*eng|\beng(ineer)?\b|eto|electr|oiler|wiper|motorman|fitter|pumpman|gas\s*eng)/i;
 const ENG_SECTIONS = ["10.1", "7.1.8", "7.16", "7.19", "7.1.1", "7.18", "10.4", "8.2"]; // maintenance, critical equipment, UMS, bunkering, LOTO, pollution, fire, drills
 const RANK_CH = [[/chief\s*eng|c\/e|\bce\b/i, "5.6"], [/2\s*\/\s*e|second\s*eng|2nd\s*eng/i, "5.7"], [/3\s*\/\s*e|third\s*eng|3rd\s*eng/i, "5.8"]];
